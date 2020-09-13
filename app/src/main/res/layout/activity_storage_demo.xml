@@ -18,8 +18,8 @@
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
         android:layout_toRightOf="@+id/button2"
-        android:onClick="saveFile"
-        android:text="@string/save_string" />
+        android:onClick="showLicences"
+        android:text="@string/licences_string" />
 
     <TextView
         android:id="@+id/preview1"

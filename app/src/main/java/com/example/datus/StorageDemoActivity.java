@@ -2,6 +2,7 @@ package com.example.datus;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.res.AssetManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
@@ -11,6 +12,8 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.android.gms.oss.licenses.OssLicensesMenuActivity;
 
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaException;
@@ -31,7 +34,6 @@ import java.text.DecimalFormat;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
-
 public class StorageDemoActivity extends AppCompatActivity {
 
     private static EditText textView;
@@ -46,11 +48,13 @@ public class StorageDemoActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_storage_demo);
+        thanks();
 
+        setContentView(R.layout.activity_storage_demo);
         textView = (EditText) findViewById(R.id.fileText);
         textView2 = (EditText) findViewById(R.id.fileText2);
         textView3 = (EditText) findViewById(R.id.hex);
+
     }
 
 
@@ -85,7 +89,7 @@ public class StorageDemoActivity extends AppCompatActivity {
 
                         try {
                             MediaType mimetype = getMediaType(currentUri);
-                            if(mimetype.getType().equals("text"))
+                            if (mimetype.getType().equals("text"))
                                 content = readFileContent(currentUri, true);
                             else
                                 content = readFileContent(currentUri, false);
@@ -117,7 +121,9 @@ public class StorageDemoActivity extends AppCompatActivity {
 
         Toast.makeText(getBaseContext(), alias,
                 Toast.LENGTH_LONG).show();
+
     }
+
     public static String hex(byte[] bytes) {
         StringBuilder result = new StringBuilder();
         for (byte aByte : bytes) {
@@ -133,22 +139,20 @@ public class StorageDemoActivity extends AppCompatActivity {
 
         InputStream inputStream =
                 getContentResolver().openInputStream(uri);
-        if(textual)
-        {
+        if (textual) {
             BufferedReader reader =
                     new BufferedReader(new InputStreamReader(
                             inputStream));
             StringBuilder stringBuilder = new StringBuilder();
             String currentline;
             int co = 0;
-            while (co<10 && (currentline = reader.readLine()) != null) {
+            while (co < 10 && (currentline = reader.readLine()) != null) {
                 stringBuilder.append(currentline + "\n");
                 co++;
             }
             inputStream.close();
             return stringBuilder.toString();
-        }else
-        {
+        } else {
             byte fileContent[] = new byte[200];
             inputStream.read(fileContent, 0, 200);
             String s = new String(fileContent);
@@ -191,12 +195,16 @@ public class StorageDemoActivity extends AppCompatActivity {
         startActivityForResult(intent, OPEN_REQUEST_CODE);
     }
 
-    public void saveFile(View view) {
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("text/plain");
+    public void showLicences(View view) {
+        startActivity(new Intent(this, OssLicensesMenuActivity.class));
+        OssLicensesMenuActivity.setActivityTitle(getString(R.string.thanks));
 
-        startActivityForResult(intent, SAVE_REQUEST_CODE);
+        Toast.makeText(getBaseContext(), "Plus the fabulous Apache Tika https://tika.apache.org/license.html",
+                Toast.LENGTH_LONG).show();
+//        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+//        intent.addCategory(Intent.CATEGORY_OPENABLE);
+//        intent.setType("text/plain");
+//        startActivityForResult(intent, SAVE_REQUEST_CODE);
     }
 
     public MediaType getMediaType(Uri uri) throws TikaException, IOException {
@@ -209,7 +217,6 @@ public class StorageDemoActivity extends AppCompatActivity {
         inputStream.close();
 
         return mimetype;
-//        return "type " + mimetype.getType() + " subtype " + mimetype.getSubtype();
     }
 
     public String detectLang(String content) {
@@ -277,16 +284,30 @@ public class StorageDemoActivity extends AppCompatActivity {
         return sizeFormatted;
     }
 
-    public static void listAllTypes() {
-        MediaTypeRegistry registry = MediaTypeRegistry.getDefaultRegistry();
+    public void thanks() {
+        String message = "";
+        try {
+            AssetManager am = getApplicationContext().getAssets();
+            InputStream is = am.open("Apache_Tika_Project_License.txt");
+            InputStreamReader inputStreamReader = new InputStreamReader(is, "UTF-8");
+            BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+            String receiveString = "";
+            StringBuilder stringBuilder = new StringBuilder();
 
-        for (MediaType type : registry.getTypes()) {
-            Set<MediaType> aliases = registry.getAliases(type);
-            System.out.println(type + ", also known as " + aliases);
+            while ((receiveString = bufferedReader.readLine()) != null) {
+                if (receiveString.equals("")) {
+                    stringBuilder.append(System.getProperty("line.separator"));
+                } else {
+                    stringBuilder.append(receiveString);
+                }
+            }
+            is.close();
+            message = stringBuilder.toString();
+            System.out.println(message);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
-
-
 }
 
 
