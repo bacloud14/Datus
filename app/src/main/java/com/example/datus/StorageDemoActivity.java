@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
+import android.text.Html;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -34,18 +35,21 @@ import java.util.concurrent.atomic.AtomicReference;
 public class StorageDemoActivity extends AppCompatActivity {
 
     private static EditText textView;
+    private static EditText textView2;
 
     private static final int CREATE_REQUEST_CODE = 40;
     private static final int OPEN_REQUEST_CODE = 41;
     private static final int SAVE_REQUEST_CODE = 42;
     private long size = 0;
     private final Metadata metadata = new Metadata();
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_storage_demo);
 
         textView = (EditText) findViewById(R.id.fileText);
+        textView2 = (EditText) findViewById(R.id.fileText2);
     }
 
     public void newFile(View view) {
@@ -64,6 +68,7 @@ public class StorageDemoActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, resultData);
         Uri currentUri = null;
         String content = "";
+        String output = "";
         String alias = "";
         MediaTypeRegistry registry = MediaTypeRegistry.getDefaultRegistry();
 //        listAllTypes();
@@ -88,22 +93,33 @@ public class StorageDemoActivity extends AppCompatActivity {
                         String language = "not a plain text or not identified";
                         String type;
                         String extention = "";
-                        content =
-                                readFileContent(currentUri);
+                        String size = "";
+
                         try {
                             MediaType mimetype = getMediaType(currentUri);
-                            Set<MediaType> aliases = registry.getAliases(mimetype);
-                            alias = mimetype + ", also known as " + aliases;
+                            if(mimetype.getType().equals("text"))
+                                content = readFileContent(currentUri, true);
+                            else
+                                content = readFileContent(currentUri, false);
+
                             if (mimetype.getType().equals("text") && mimetype.getSubtype().equals("plain")) {
                                 language = detectLang(content);
                             }
+                            size = getMediaSize(currentUri);
+                            Set<MediaType> aliases = registry.getAliases(mimetype);
+                            alias = mimetype + ", also known as " + aliases;
+
                             extention = detectExtension(mimetype);
                             type = mimetype.getType();
-                            content = "Type: " + type + "\nLanguage: " + language + "\nExtension: " + extention;
+                            output = "<font color='#008577'>Type: " + type + "</font><br>Language: " + language + "<br>Extension: " + extention + "<br>Size: " + size;
                         } catch (TikaException e) {
                             e.printStackTrace();
                         }
-                        textView.setText(content);
+                        textView.setText(Html.fromHtml(output));
+                        if (content.length() >= 200)
+                            textView2.setText(content.substring(0, 200));
+                        else
+                            textView2.setText(content);
                     } catch (IOException e) {
                         // Handle error here
                     }
@@ -116,20 +132,34 @@ public class StorageDemoActivity extends AppCompatActivity {
     }
 
     // limit content parsing to some extent not to be so heavy
-    private String readFileContent(Uri uri) throws IOException {
+    private String readFileContent(Uri uri, boolean textual) throws IOException {
 
         InputStream inputStream =
                 getContentResolver().openInputStream(uri);
-        BufferedReader reader =
-                new BufferedReader(new InputStreamReader(
-                        inputStream));
-        StringBuilder stringBuilder = new StringBuilder();
-        String currentline;
-        while ((currentline = reader.readLine()) != null) {
-            stringBuilder.append(currentline + "\n");
+        if(textual)
+        {
+            BufferedReader reader =
+                    new BufferedReader(new InputStreamReader(
+                            inputStream));
+            StringBuilder stringBuilder = new StringBuilder();
+            String currentline;
+            int co = 0;
+            while (co<10 && (currentline = reader.readLine()) != null) {
+                stringBuilder.append(currentline + "\n");
+                co++;
+            }
+            inputStream.close();
+            return stringBuilder.toString();
+        }else
+        {
+            byte fileContent[] = new byte[200];
+            inputStream.read(fileContent, 0, 200);
+            String s = new String(fileContent);
+            inputStream.close();
+            return s;
         }
-        inputStream.close();
-        return stringBuilder.toString();
+
+
     }
 
     private void writeFileContent(Uri uri) {
@@ -158,7 +188,7 @@ public class StorageDemoActivity extends AppCompatActivity {
     public void openFile(View view) {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("text/plain");
+        intent.setType("*/*");
         startActivityForResult(intent, OPEN_REQUEST_CODE);
     }
 
@@ -177,21 +207,8 @@ public class StorageDemoActivity extends AppCompatActivity {
 
         MediaType mimetype = tika.getDetector().detect(
                 TikaInputStream.get(inputStream), new Metadata());
+        inputStream.close();
 
-        InputStream inputStream2 =
-                getContentResolver().openInputStream(uri);
-        String value = metadata.get(Metadata.CONTENT_LENGTH);
-
-        if (null != value && !value.isEmpty()) {
-            size = Long.valueOf(value);
-        } else {
-            try (final TikaInputStream tis = TikaInputStream.get(inputStream2)) {
-                size = tis.getLength();
-            }
-
-            metadata.set(Metadata.CONTENT_LENGTH, Long.toString(size));
-        }
-        String sizeFormatted = readableFileSize(size);
         return mimetype;
 //        return "type " + mimetype.getType() + " subtype " + mimetype.getSubtype();
     }
@@ -230,10 +247,35 @@ public class StorageDemoActivity extends AppCompatActivity {
     }
 
     public static String readableFileSize(long size) {
-        if(size <= 0) return "0";
-        final String[] units = new String[] { "B", "kB", "MB", "GB", "TB" };
-        int digitGroups = (int) (Math.log10(size)/Math.log10(1024));
-        return new DecimalFormat("#,##0.#").format(size/Math.pow(1024, digitGroups)) + " " + units[digitGroups];
+        if (size <= 0) return "0";
+        final String[] units = new String[]{"B", "kB", "MB", "GB", "TB"};
+        int digitGroups = (int) (Math.log10(size) / Math.log10(1024));
+        return new DecimalFormat("#,##0.#").format(size / Math.pow(1024, digitGroups)) + " " + units[digitGroups];
+    }
+
+    public String getMediaSize(Uri uri) throws FileNotFoundException {
+        InputStream inputStream2 =
+                getContentResolver().openInputStream(uri);
+        String value = metadata.get(Metadata.CONTENT_LENGTH);
+
+        if (null != value && !value.isEmpty()) {
+            size = Long.valueOf(value);
+        } else {
+            try (final TikaInputStream tis = TikaInputStream.get(inputStream2)) {
+                size = tis.getLength();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            metadata.set(Metadata.CONTENT_LENGTH, Long.toString(size));
+        }
+        try {
+            inputStream2.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        String sizeFormatted = readableFileSize(size);
+        return sizeFormatted;
     }
 
     public static void listAllTypes() {

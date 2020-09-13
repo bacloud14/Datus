@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="new_string"> new file </string>
-    <string name="open_string" > open file </string>
-    <string name="save_string" > save file </string>
-    <string name="app_name" > Datus </string>
+    <string name="open_string"> open file </string>
+    <string name="save_string"> save file </string>
+    <string name="app_name"> Datus </string>
 </resources>

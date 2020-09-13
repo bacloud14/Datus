@@ -5,39 +5,68 @@
     tools:context=".StorageDemoActivity">
 
     <Button
+        android:id="@+id/button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/new_string"
-        android:id="@+id/button"
-        android:layout_alignParentTop="true"
         android:layout_alignParentStart="true"
-        android:onClick="newFile" />
+        android:layout_alignParentTop="true"
+        android:onClick="newFile"
+        android:text="@string/new_string" />
 
     <Button
+        android:id="@+id/button2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/open_string"
-        android:id="@+id/button2"
         android:layout_alignBottom="@+id/button"
         android:layout_toRightOf="@+id/button"
-        android:onClick="openFile" />
+        android:onClick="openFile"
+        android:text="@string/open_string" />
 
     <Button
+        android:id="@+id/button3"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/save_string"
-        android:id="@+id/button3"
         android:layout_alignParentTop="true"
         android:layout_toRightOf="@+id/button2"
-        android:onClick="saveFile" />
+        android:onClick="saveFile"
+        android:text="@string/save_string" />
+
+    <TextView
+        android:id="@+id/preview1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/button2"
+        android:text="File metadata"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
 
     <EditText
         android:id="@+id/fileText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_below="@+id/preview1"
         android:layout_alignParentLeft="true"
-        android:layout_below="@+id/button"
         android:inputType="textMultiLine"
-        android:scrollbars="vertical" />
+        android:scrollbars="vertical"
+        android:typeface="monospace" />
 
+    <TextView
+        android:id="@+id/preview2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/fileText"
+        android:text="File header preview in ASCCI"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <EditText
+        android:id="@+id/fileText2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/preview2"
+        android:layout_alignParentLeft="true"
+        android:inputType="textMultiLine"
+        android:scrollbars="vertical"
+        android:typeface="monospace" />
 </RelativeLayout>
