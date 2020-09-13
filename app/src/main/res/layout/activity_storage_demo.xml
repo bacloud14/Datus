@@ -4,11 +4,19 @@
     android:layout_height="match_parent"
     tools:context=".StorageDemoActivity">
 
+    <Button
+        android:id="@+id/button1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="thanks"
+        android:text="@string/tika" />
 
     <Button
         android:id="@+id/button2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_toRightOf="@+id/button1"
         android:onClick="openFile"
         android:text="@string/open_string" />
 

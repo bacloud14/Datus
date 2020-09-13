@@ -1,14 +1,19 @@
 package com.example.datus;
 
 import android.app.Activity;
+import android.app.Dialog;
 import android.content.Intent;
 import android.content.res.AssetManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
 import android.text.Html;
+import android.view.Gravity;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -36,27 +41,42 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class StorageDemoActivity extends AppCompatActivity {
 
+    private static final int OPEN_REQUEST_CODE = 41;
+    private static final int SAVE_REQUEST_CODE = 42;
     private static EditText textView;
     private static EditText textView2;
     private static EditText textView3;
-
-    private static final int OPEN_REQUEST_CODE = 41;
-    private static final int SAVE_REQUEST_CODE = 42;
-    private long size = 0;
     private final Metadata metadata = new Metadata();
+    private long size = 0;
+
+    public static String hex(byte[] bytes) {
+        StringBuilder result = new StringBuilder();
+        for (byte aByte : bytes) {
+            result.append(String.format("%02x", aByte));
+            // upper case
+            // result.append(String.format("%02X", aByte));
+        }
+        return result.toString();
+    }
+
+    public static String readableFileSize(long size) {
+        if (size <= 0) return "0";
+        final String[] units = new String[]{"B", "kB", "MB", "GB", "TB"};
+        int digitGroups = (int) (Math.log10(size) / Math.log10(1024));
+        return new DecimalFormat("#,##0.#").format(size / Math.pow(1024, digitGroups)) + " " + units[digitGroups];
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        thanks();
+
 
         setContentView(R.layout.activity_storage_demo);
         textView = (EditText) findViewById(R.id.fileText);
         textView2 = (EditText) findViewById(R.id.fileText2);
         textView3 = (EditText) findViewById(R.id.hex);
- 
-    }
 
+    }
 
     public void onActivityResult(int requestCode, int resultCode,
                                  Intent resultData) {
@@ -122,16 +142,6 @@ public class StorageDemoActivity extends AppCompatActivity {
         Toast.makeText(getBaseContext(), alias,
                 Toast.LENGTH_LONG).show();
 
-    }
-
-    public static String hex(byte[] bytes) {
-        StringBuilder result = new StringBuilder();
-        for (byte aByte : bytes) {
-            result.append(String.format("%02x", aByte));
-            // upper case
-            // result.append(String.format("%02X", aByte));
-        }
-        return result.toString();
     }
 
     // limit content parsing to some extent not to be so heavy
@@ -201,6 +211,7 @@ public class StorageDemoActivity extends AppCompatActivity {
 
         Toast.makeText(getBaseContext(), "Plus the fabulous Apache Tika https://tika.apache.org/license.html",
                 Toast.LENGTH_LONG).show();
+
 //        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
 //        intent.addCategory(Intent.CATEGORY_OPENABLE);
 //        intent.setType("text/plain");
@@ -252,13 +263,6 @@ public class StorageDemoActivity extends AppCompatActivity {
 
     }
 
-    public static String readableFileSize(long size) {
-        if (size <= 0) return "0";
-        final String[] units = new String[]{"B", "kB", "MB", "GB", "TB"};
-        int digitGroups = (int) (Math.log10(size) / Math.log10(1024));
-        return new DecimalFormat("#,##0.#").format(size / Math.pow(1024, digitGroups)) + " " + units[digitGroups];
-    }
-
     public String getMediaSize(Uri uri) throws FileNotFoundException {
         InputStream inputStream2 =
                 getContentResolver().openInputStream(uri);
@@ -284,7 +288,7 @@ public class StorageDemoActivity extends AppCompatActivity {
         return sizeFormatted;
     }
 
-    public void thanks() {
+    public void thanks(View view) {
         String message = "";
         try {
             AssetManager am = getApplicationContext().getAssets();
@@ -307,6 +311,27 @@ public class StorageDemoActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        createDialog(message);
+    }
+
+    private void createDialog(String message) {
+        Dialog custoDialog = new Dialog(StorageDemoActivity.this);
+        custoDialog.setContentView(R.layout.tika_licence_layout);
+
+        Window window = custoDialog.getWindow();
+        window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
+        window.setGravity(Gravity.CENTER);
+
+
+        TextView tv = (TextView) custoDialog.findViewById(R.id.tv);
+        tv.setText(message);
+        tv.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+            }
+        });
+        custoDialog.show();
     }
 }
 
