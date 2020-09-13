@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
-import android.os.StrictMode;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -18,6 +17,7 @@ import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.language.LanguageIdentifier;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.mime.MediaType;
+import org.apache.tika.mime.MediaTypeRegistry;
 import org.apache.tika.mime.MimeType;
 
 import java.io.BufferedReader;
@@ -26,6 +26,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 
@@ -36,7 +37,8 @@ public class StorageDemoActivity extends AppCompatActivity {
     private static final int CREATE_REQUEST_CODE = 40;
     private static final int OPEN_REQUEST_CODE = 41;
     private static final int SAVE_REQUEST_CODE = 42;
-
+    private long size = 0;
+    private final Metadata metadata = new Metadata();
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -61,6 +63,9 @@ public class StorageDemoActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, resultData);
         Uri currentUri = null;
         String content = "";
+        String alias = "";
+        MediaTypeRegistry registry = MediaTypeRegistry.getDefaultRegistry();
+//        listAllTypes();
         if (resultCode == Activity.RESULT_OK) {
 
             if (requestCode == CREATE_REQUEST_CODE) {
@@ -85,13 +90,15 @@ public class StorageDemoActivity extends AppCompatActivity {
                         content =
                                 readFileContent(currentUri);
                         try {
-                            MediaType mimetype = memeExample(currentUri);
+                            MediaType mimetype = getMediaType(currentUri);
+                            Set<MediaType> aliases = registry.getAliases(mimetype);
+                            alias = mimetype + ", also known as " + aliases;
                             if (mimetype.getType().equals("text") && mimetype.getSubtype().equals("plain")) {
                                 language = detectLang(content);
                             }
-                            extention = tikaMediaTypes(mimetype);
+                            extention = detectExtension(mimetype);
                             type = mimetype.getType();
-                            content = "Type: " + type + "\nLanguage: " + language + "\nExtention: " + extention;
+                            content = "Type: " + type + "\nLanguage: " + language + "\nExtension: " + extention;
                         } catch (TikaException e) {
                             e.printStackTrace();
                         }
@@ -102,11 +109,12 @@ public class StorageDemoActivity extends AppCompatActivity {
                 }
             }
         }
-        System.out.println();
-        Toast.makeText(getBaseContext(), content,
+
+        Toast.makeText(getBaseContext(), alias,
                 Toast.LENGTH_LONG).show();
     }
 
+    // limit content parsing to some extent not to be so heavy
     private String readFileContent(Uri uri) throws IOException {
 
         InputStream inputStream =
@@ -161,13 +169,26 @@ public class StorageDemoActivity extends AppCompatActivity {
         startActivityForResult(intent, SAVE_REQUEST_CODE);
     }
 
-    public MediaType memeExample(Uri uri) throws TikaException, IOException {
+    public MediaType getMediaType(Uri uri) throws TikaException, IOException {
         InputStream inputStream =
                 getContentResolver().openInputStream(uri);
         TikaConfig tika = new TikaConfig();
 
         MediaType mimetype = tika.getDetector().detect(
                 TikaInputStream.get(inputStream), new Metadata());
+        String value = metadata.get(Metadata.CONTENT_LENGTH);
+
+        if (null != value && !value.isEmpty()) {
+            size = Long.valueOf(value);
+        } else {
+            try (final TikaInputStream tis = TikaInputStream.get(inputStream)) {
+                size = tis.getLength();
+            }
+
+            metadata.set(Metadata.CONTENT_LENGTH, Long.toString(size));
+        }
+
+        System.out.println(size);
         return mimetype;
 //        return "type " + mimetype.getType() + " subtype " + mimetype.getSubtype();
     }
@@ -178,7 +199,7 @@ public class StorageDemoActivity extends AppCompatActivity {
         return language;
     }
 
-    public String tikaMediaTypes(MediaType mediatype) {
+    public String detectExtension(MediaType mediatype) {
         TikaConfig tika = null;
         String extension = "";
         AtomicReference<String> mimeTypeRef = new AtomicReference<>(null);
@@ -205,5 +226,16 @@ public class StorageDemoActivity extends AppCompatActivity {
 
     }
 
+    public static void listAllTypes() {
+        MediaTypeRegistry registry = MediaTypeRegistry.getDefaultRegistry();
+
+        for (MediaType type : registry.getTypes()) {
+            Set<MediaType> aliases = registry.getAliases(type);
+            System.out.println(type + ", also known as " + aliases);
+        }
+    }
+
+
 }
+
 
