@@ -54,7 +54,7 @@ public class StorageDemoActivity extends AppCompatActivity {
         textView = (EditText) findViewById(R.id.fileText);
         textView2 = (EditText) findViewById(R.id.fileText2);
         textView3 = (EditText) findViewById(R.id.hex);
-
+ 
     }
 
 
