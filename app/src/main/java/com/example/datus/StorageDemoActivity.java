@@ -36,8 +36,8 @@ public class StorageDemoActivity extends AppCompatActivity {
 
     private static EditText textView;
     private static EditText textView2;
+    private static EditText textView3;
 
-    private static final int CREATE_REQUEST_CODE = 40;
     private static final int OPEN_REQUEST_CODE = 41;
     private static final int SAVE_REQUEST_CODE = 42;
     private long size = 0;
@@ -50,17 +50,9 @@ public class StorageDemoActivity extends AppCompatActivity {
 
         textView = (EditText) findViewById(R.id.fileText);
         textView2 = (EditText) findViewById(R.id.fileText2);
+        textView3 = (EditText) findViewById(R.id.hex);
     }
 
-    public void newFile(View view) {
-        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
-
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("text/plain");
-        intent.putExtra(Intent.EXTRA_TITLE, "newfile.txt");
-
-        startActivityForResult(intent, CREATE_REQUEST_CODE);
-    }
 
     public void onActivityResult(int requestCode, int resultCode,
                                  Intent resultData) {
@@ -74,11 +66,7 @@ public class StorageDemoActivity extends AppCompatActivity {
 //        listAllTypes();
         if (resultCode == Activity.RESULT_OK) {
 
-            if (requestCode == CREATE_REQUEST_CODE) {
-                if (resultData != null) {
-                    textView.setText("");
-                }
-            } else if (requestCode == SAVE_REQUEST_CODE) {
+            if (requestCode == SAVE_REQUEST_CODE) {
 
                 if (resultData != null) {
                     currentUri = resultData.getData();
@@ -130,6 +118,15 @@ public class StorageDemoActivity extends AppCompatActivity {
         Toast.makeText(getBaseContext(), alias,
                 Toast.LENGTH_LONG).show();
     }
+    public static String hex(byte[] bytes) {
+        StringBuilder result = new StringBuilder();
+        for (byte aByte : bytes) {
+            result.append(String.format("%02x", aByte));
+            // upper case
+            // result.append(String.format("%02X", aByte));
+        }
+        return result.toString();
+    }
 
     // limit content parsing to some extent not to be so heavy
     private String readFileContent(Uri uri, boolean textual) throws IOException {
@@ -155,6 +152,8 @@ public class StorageDemoActivity extends AppCompatActivity {
             byte fileContent[] = new byte[200];
             inputStream.read(fileContent, 0, 200);
             String s = new String(fileContent);
+            String hexCode = hex(fileContent);
+            textView3.setText(hexCode);
             inputStream.close();
             return s;
         }

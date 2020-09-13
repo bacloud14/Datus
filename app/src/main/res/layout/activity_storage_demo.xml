@@ -4,21 +4,11 @@
     android:layout_height="match_parent"
     tools:context=".StorageDemoActivity">
 
-    <Button
-        android:id="@+id/button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentTop="true"
-        android:onClick="newFile"
-        android:text="@string/new_string" />
 
     <Button
         android:id="@+id/button2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignBottom="@+id/button"
-        android:layout_toRightOf="@+id/button"
         android:onClick="openFile"
         android:text="@string/open_string" />
 
@@ -56,7 +46,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@+id/fileText"
-        android:text="File header preview in ASCCI"
+        android:text="First file bytes preview in ASCCI"
         android:textSize="18sp"
         android:textStyle="bold" />
 
@@ -65,6 +55,25 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@+id/preview2"
+        android:layout_alignParentLeft="true"
+        android:inputType="textMultiLine"
+        android:scrollbars="vertical"
+        android:typeface="monospace" />
+
+    <TextView
+        android:id="@+id/preview3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/fileText2"
+        android:text="Hex preview"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <EditText
+        android:id="@+id/hex"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/preview3"
         android:layout_alignParentLeft="true"
         android:inputType="textMultiLine"
         android:scrollbars="vertical"
