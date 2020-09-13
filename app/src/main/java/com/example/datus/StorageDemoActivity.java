@@ -26,6 +26,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.text.DecimalFormat;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -176,19 +177,21 @@ public class StorageDemoActivity extends AppCompatActivity {
 
         MediaType mimetype = tika.getDetector().detect(
                 TikaInputStream.get(inputStream), new Metadata());
+
+        InputStream inputStream2 =
+                getContentResolver().openInputStream(uri);
         String value = metadata.get(Metadata.CONTENT_LENGTH);
 
         if (null != value && !value.isEmpty()) {
             size = Long.valueOf(value);
         } else {
-            try (final TikaInputStream tis = TikaInputStream.get(inputStream)) {
+            try (final TikaInputStream tis = TikaInputStream.get(inputStream2)) {
                 size = tis.getLength();
             }
 
             metadata.set(Metadata.CONTENT_LENGTH, Long.toString(size));
         }
-
-        System.out.println(size);
+        String sizeFormatted = readableFileSize(size);
         return mimetype;
 //        return "type " + mimetype.getType() + " subtype " + mimetype.getSubtype();
     }
@@ -224,6 +227,13 @@ public class StorageDemoActivity extends AppCompatActivity {
 
         return extension;
 
+    }
+
+    public static String readableFileSize(long size) {
+        if(size <= 0) return "0";
+        final String[] units = new String[] { "B", "kB", "MB", "GB", "TB" };
+        int digitGroups = (int) (Math.log10(size)/Math.log10(1024));
+        return new DecimalFormat("#,##0.#").format(size/Math.pow(1024, digitGroups)) + " " + units[digitGroups];
     }
 
     public static void listAllTypes() {
