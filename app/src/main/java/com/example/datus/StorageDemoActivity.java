@@ -5,9 +5,11 @@ import android.app.Dialog;
 import android.content.Intent;
 import android.content.res.AssetManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
 import android.text.Html;
+import android.text.Layout;
 import android.view.Gravity;
 import android.view.View;
 import android.view.Window;
@@ -324,7 +326,10 @@ public class StorageDemoActivity extends AppCompatActivity {
         window.setGravity(Gravity.CENTER);
 
 
-        TextView tv = (TextView) custoDialog.findViewById(R.id.tv);
+        TextView tv = custoDialog.findViewById(R.id.tv);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            tv.setJustificationMode(Layout.JUSTIFICATION_MODE_INTER_WORD);
+        }
         tv.setText(message);
         tv.setOnClickListener(new View.OnClickListener() {
             @Override
