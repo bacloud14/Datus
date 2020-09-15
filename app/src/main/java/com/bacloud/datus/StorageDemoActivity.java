@@ -139,18 +139,20 @@ public class StorageDemoActivity extends AppCompatActivity {
 //                            String native_tags = getMetaDataNative(currentUri);
                             String[] native_tags = dumpImageMetaData(this, currentUri);
 //                            String path_to_file = Utils.getPath(this, currentUri);
-//                            Utils.bimboum(Paths.get(path_to_file));
+//                            Utils.bimboum(Paths.get(path_to_file.substring(0,20)+native_tags[0]));
 //                            BasicFileAttributes attr = getMetaDataNative(currentUri);
                             Set<MediaType> aliases = registry.getAliases(mimetype);
-                            alias = mimetype + " is known as " + aliases;
+                            alias = aliases.isEmpty() ? "" : "<br><font color='#008577'>" + mimetype + " is known as " + aliases + "</font>";
 
                             extention = detectExtension(mimetype);
                             type = mimetype.getType();
-                            output = "<font color='#008577'>Type: " + type + "</font><br>" +
-                                    "<font color='#008577'>" + alias + "</font><br>" +
-                                    "Language: " + language +
+                            output = "Name: " + native_tags[0] +
+                                    "<br><font color='#008577'>Type: " + type + "</font>" +
+                                    alias +
+                                    "<br>Language: " + language +
                                     "<br>Extension: " + extention +
                                     "<br>Size: " + size;
+
                         } catch (TikaException e) {
                             e.printStackTrace();
                         }
