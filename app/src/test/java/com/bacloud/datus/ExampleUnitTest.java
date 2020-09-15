@@ -1,4 +1,4 @@
-package com.example.datus;
+package com.bacloud.datus;
 
 import org.junit.Test;
 

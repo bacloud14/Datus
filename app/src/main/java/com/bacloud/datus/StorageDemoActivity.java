@@ -1,15 +1,22 @@
-package com.example.datus;
+package com.bacloud.datus;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetManager;
+import android.database.Cursor;
+import android.graphics.text.LineBreaker;
+import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
+import android.provider.MediaStore;
+import android.provider.OpenableColumns;
 import android.text.Html;
 import android.text.Layout;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.Window;
@@ -22,6 +29,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.gms.oss.licenses.OssLicensesMenuActivity;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.io.TikaInputStream;
@@ -32,12 +40,19 @@ import org.apache.tika.mime.MediaTypeRegistry;
 import org.apache.tika.mime.MimeType;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Array;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.text.DecimalFormat;
+import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -54,7 +69,7 @@ public class StorageDemoActivity extends AppCompatActivity {
     public static String hex(byte[] bytes) {
         StringBuilder result = new StringBuilder();
         for (byte aByte : bytes) {
-            result.append(String.format("%02x", aByte));
+            result.append(String.format("%02x ", aByte));
             // upper case
             // result.append(String.format("%02X", aByte));
         }
@@ -62,6 +77,7 @@ public class StorageDemoActivity extends AppCompatActivity {
     }
 
     public static String readableFileSize(long size) {
+        System.out.println("size" + size);
         if (size <= 0) return "0";
         final String[] units = new String[]{"B", "kB", "MB", "GB", "TB"};
         int digitGroups = (int) (Math.log10(size) / Math.log10(1024));
@@ -120,12 +136,21 @@ public class StorageDemoActivity extends AppCompatActivity {
                                 language = detectLang(content);
                             }
                             size = getMediaSize(currentUri);
+//                            String native_tags = getMetaDataNative(currentUri);
+                            String[] native_tags = dumpImageMetaData(this, currentUri);
+//                            String path_to_file = Utils.getPath(this, currentUri);
+//                            Utils.bimboum(Paths.get(path_to_file));
+//                            BasicFileAttributes attr = getMetaDataNative(currentUri);
                             Set<MediaType> aliases = registry.getAliases(mimetype);
-                            alias = mimetype + ", also known as " + aliases;
+                            alias = mimetype + " is known as " + aliases;
 
                             extention = detectExtension(mimetype);
                             type = mimetype.getType();
-                            output = "<font color='#008577'>Type: " + type + "</font><br>Language: " + language + "<br>Extension: " + extention + "<br>Size: " + size;
+                            output = "<font color='#008577'>Type: " + type + "</font><br>" +
+                                    "<font color='#008577'>" + alias + "</font><br>" +
+                                    "Language: " + language +
+                                    "<br>Extension: " + extention +
+                                    "<br>Size: " + size;
                         } catch (TikaException e) {
                             e.printStackTrace();
                         }
@@ -136,6 +161,7 @@ public class StorageDemoActivity extends AppCompatActivity {
                             textView2.setText(content);
                     } catch (IOException e) {
                         // Handle error here
+                        e.printStackTrace();
                     }
                 }
             }
@@ -144,6 +170,76 @@ public class StorageDemoActivity extends AppCompatActivity {
         Toast.makeText(getBaseContext(), alias,
                 Toast.LENGTH_LONG).show();
 
+    }
+
+    public String[] dumpImageMetaData(Context context, Uri uri) {
+        String displayName = "";
+        String size = "";
+        // The query, since it only applies to a single document, will only return
+        // one row. There's no need to filter, sort, or select fields, since we want
+        // all fields for one document.
+        Cursor cursor = context.getContentResolver().query(uri, null, null, null, null);
+
+        try {
+            // moveToFirst() returns false if the cursor has 0 rows.  Very handy for
+            // "if there's anything to look at, look at it" conditionals.
+            if (cursor != null && cursor.moveToFirst()) {
+
+                // Note it's called "Display Name".  This is
+                // provider-specific, and might not necessarily be the file name.
+                displayName = cursor.getString(
+                        cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME));
+                System.out.println("Display Name: " + displayName);
+
+                int sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE);
+                // If the size is unknown, the value stored is null.  But since an
+                // int can't be null in Java, the behavior is implementation-specific,
+                // which is just a fancy term for "unpredictable".  So as
+                // a rule, check if it's null before assigning to an int.  This will
+                // happen often:  The storage API allows for remote files, whose
+                // size might not be locally known.
+                size = null;
+                if (!cursor.isNull(sizeIndex)) {
+                    // Technically the column stores an int, but cursor.getString()
+                    // will do the conversion automatically.
+                    size = cursor.getString(sizeIndex);
+                } else {
+                    size = "Unknown";
+                }
+                System.out.println("Size: " + size);
+            }
+        } finally {
+            cursor.close();
+        }
+        return new String[]{displayName, size};
+    }
+
+    public static String getFileNameByUri(Context context, Uri uri) {
+        String fileName = "unknown";//default fileName
+        Uri filePathUri = uri;
+        if (uri.getScheme().toString().compareTo("content") == 0) {
+            Cursor cursor = context.getContentResolver().query(uri, null, null, null, null);
+            if (cursor.moveToFirst()) {
+                int column_index = cursor.getColumnIndexOrThrow("_display_name");//Instead of "MediaStore.Images.Media.DATA" can be used "_data"
+                System.out.println("çççççççççççççççççç");
+                System.out.println(Arrays.toString(cursor.getColumnNames()));
+                System.out.println(cursor.toString());
+                filePathUri = Uri.parse(cursor.getString(0));
+                fileName = filePathUri.getLastPathSegment().toString();
+            }
+        } else if (uri.getScheme().compareTo("file") == 0) {
+            fileName = filePathUri.getLastPathSegment().toString();
+        } else {
+            fileName = fileName + "_" + filePathUri.getLastPathSegment();
+        }
+        return fileName;
+    }
+
+    private BasicFileAttributes getMetaDataNative(Uri uri) throws IOException {
+        System.out.println(uri);
+        Path path = Paths.get(getFileNameByUri(this, uri));
+        BasicFileAttributes attr = Files.readAttributes(path, BasicFileAttributes.class);
+        return attr;
     }
 
     // limit content parsing to some extent not to be so heavy
@@ -268,18 +364,10 @@ public class StorageDemoActivity extends AppCompatActivity {
     public String getMediaSize(Uri uri) throws FileNotFoundException {
         InputStream inputStream2 =
                 getContentResolver().openInputStream(uri);
-        String value = metadata.get(Metadata.CONTENT_LENGTH);
-
-        if (null != value && !value.isEmpty()) {
-            size = Long.valueOf(value);
-        } else {
-            try (final TikaInputStream tis = TikaInputStream.get(inputStream2)) {
-                size = tis.getLength();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            metadata.set(Metadata.CONTENT_LENGTH, Long.toString(size));
+        try (final TikaInputStream tis = TikaInputStream.get(inputStream2)) {
+            size = tis.getLength();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
         try {
             inputStream2.close();
@@ -309,7 +397,6 @@ public class StorageDemoActivity extends AppCompatActivity {
             }
             is.close();
             message = stringBuilder.toString();
-            System.out.println(message);
         } catch (IOException e) {
             e.printStackTrace();
         }
