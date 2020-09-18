@@ -6,17 +6,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetManager;
 import android.database.Cursor;
-import android.graphics.text.LineBreaker;
-import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
-import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.text.Html;
 import android.text.Layout;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.Window;
@@ -27,9 +23,12 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.drew.imaging.ImageMetadataReader;
+import com.drew.imaging.ImageProcessingException;
+import com.drew.metadata.Directory;
+import com.drew.metadata.Tag;
 import com.google.android.gms.oss.licenses.OssLicensesMenuActivity;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.io.TikaInputStream;
@@ -40,19 +39,13 @@ import org.apache.tika.mime.MediaTypeRegistry;
 import org.apache.tika.mime.MimeType;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.lang.reflect.Array;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.text.DecimalFormat;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -63,7 +56,7 @@ public class StorageDemoActivity extends AppCompatActivity {
     private static EditText textView;
     private static EditText textView2;
     private static EditText textView3;
-    private final Metadata metadata = new Metadata();
+
     private long size = 0;
 
     public static String hex(byte[] bytes) {
@@ -77,7 +70,6 @@ public class StorageDemoActivity extends AppCompatActivity {
     }
 
     public static String readableFileSize(long size) {
-        System.out.println("size" + size);
         if (size <= 0) return "0";
         final String[] units = new String[]{"B", "kB", "MB", "GB", "TB"};
         int digitGroups = (int) (Math.log10(size) / Math.log10(1024));
@@ -124,7 +116,6 @@ public class StorageDemoActivity extends AppCompatActivity {
                         String type;
                         String extention = "";
                         String size = "";
-
                         try {
                             MediaType mimetype = getMediaType(currentUri);
                             if (mimetype.getType().equals("text"))
@@ -146,8 +137,10 @@ public class StorageDemoActivity extends AppCompatActivity {
 
                             extention = detectExtension(mimetype);
                             type = mimetype.getType();
+
+
                             output = "Name: " + native_tags[0] +
-                                    "<br><font color='#008577'>Type: " + type + "</font>" +
+                                    "<br><font color='#1ABC9C'>Type: " + type + "</font>" +
                                     alias +
                                     "<br>Language: " + language +
                                     "<br>Extension: " + extention +
@@ -157,10 +150,22 @@ public class StorageDemoActivity extends AppCompatActivity {
                             e.printStackTrace();
                         }
                         textView.setText(Html.fromHtml(output));
-                        if (content.length() >= 200)
-                            textView2.setText(content.substring(0, 200));
-                        else
-                            textView2.setText(content);
+
+                        ArrayList<String> metadata = getImageAndVideosMetadata(currentUri);
+                        if (metadata != null) {
+                            StringBuilder builder = new StringBuilder();
+                            for (String value : metadata) {
+                                builder.append(value);
+                            }
+                            String text = "<small>" + builder.toString() + "</small>";
+                            textView2.setText(Html.fromHtml(text));
+                        } else {
+                            if (content.length() >= 200)
+                                textView2.setText(Html.fromHtml("<small>" + content.substring(0, 200) + "</small>"));
+                            else
+                                textView2.setText(Html.fromHtml("<small>" + content + "</small>"));
+                        }
+
                     } catch (IOException e) {
                         // Handle error here
                         e.printStackTrace();
@@ -169,7 +174,7 @@ public class StorageDemoActivity extends AppCompatActivity {
             }
         }
 
-        Toast.makeText(getBaseContext(), alias,
+        Toast.makeText(getBaseContext(), "success",
                 Toast.LENGTH_LONG).show();
 
     }
@@ -191,7 +196,6 @@ public class StorageDemoActivity extends AppCompatActivity {
                 // provider-specific, and might not necessarily be the file name.
                 displayName = cursor.getString(
                         cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME));
-                System.out.println("Display Name: " + displayName);
 
                 int sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE);
                 // If the size is unknown, the value stored is null.  But since an
@@ -208,7 +212,6 @@ public class StorageDemoActivity extends AppCompatActivity {
                 } else {
                     size = "Unknown";
                 }
-                System.out.println("Size: " + size);
             }
         } finally {
             cursor.close();
@@ -223,9 +226,6 @@ public class StorageDemoActivity extends AppCompatActivity {
             Cursor cursor = context.getContentResolver().query(uri, null, null, null, null);
             if (cursor.moveToFirst()) {
                 int column_index = cursor.getColumnIndexOrThrow("_display_name");//Instead of "MediaStore.Images.Media.DATA" can be used "_data"
-                System.out.println("çççççççççççççççççç");
-                System.out.println(Arrays.toString(cursor.getColumnNames()));
-                System.out.println(cursor.toString());
                 filePathUri = Uri.parse(cursor.getString(0));
                 fileName = filePathUri.getLastPathSegment().toString();
             }
@@ -237,18 +237,35 @@ public class StorageDemoActivity extends AppCompatActivity {
         return fileName;
     }
 
-    private BasicFileAttributes getMetaDataNative(Uri uri) throws IOException {
-        System.out.println(uri);
-        Path path = Paths.get(getFileNameByUri(this, uri));
-        BasicFileAttributes attr = Files.readAttributes(path, BasicFileAttributes.class);
-        return attr;
+
+    private ArrayList<String> getImageAndVideosMetadata(Uri uri) throws IOException {
+        InputStream inputStream = getContentResolver().openInputStream(uri);
+        ArrayList<String> directories = new ArrayList<String>();
+        try {
+            com.drew.metadata.Metadata metadata2 = ImageMetadataReader.readMetadata(inputStream);
+            for (Directory directory : metadata2.getDirectories()) {
+                for (Tag tag : directory.getTags()) {
+                    directories.add(String.format("<font color='#3498DB'>[%s]</font> - %s = %s<br>",
+                            directory.getName(), tag.getTagName(), tag.getDescription()));
+                }
+                if (directory.hasErrors()) {
+                    for (String error : directory.getErrors()) {
+                        directories.add("<font color='#C0392B'>ERROR: " + error + "</font><br>");
+                    }
+                }
+            }
+        } catch (ImageProcessingException e) {
+            return null;
+        }
+        return directories;
+
     }
 
     // limit content parsing to some extent not to be so heavy
     private String readFileContent(Uri uri, boolean textual) throws IOException {
 
-        InputStream inputStream =
-                getContentResolver().openInputStream(uri);
+        InputStream inputStream = getContentResolver().openInputStream(uri);
+
         if (textual) {
             BufferedReader reader =
                     new BufferedReader(new InputStreamReader(
@@ -266,8 +283,8 @@ public class StorageDemoActivity extends AppCompatActivity {
             byte fileContent[] = new byte[200];
             inputStream.read(fileContent, 0, 200);
             String s = new String(fileContent);
-            String hexCode = hex(fileContent);
-            textView3.setText(hexCode);
+            String hexCode = "<small>" + hex(fileContent) + "</small>";
+            textView3.setText(Html.fromHtml(hexCode));
             inputStream.close();
             return s;
         }
@@ -381,10 +398,11 @@ public class StorageDemoActivity extends AppCompatActivity {
     }
 
     public void thanks(View view) {
+        String to = view.getTag().toString();
         String message = "";
         try {
             AssetManager am = getApplicationContext().getAssets();
-            InputStream is = am.open("Apache_Tika_Project_License.txt");
+            InputStream is = am.open(to);
             InputStreamReader inputStreamReader = new InputStreamReader(is, "UTF-8");
             BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
             String receiveString = "";
@@ -408,7 +426,7 @@ public class StorageDemoActivity extends AppCompatActivity {
 
     private void createDialog(String message) {
         Dialog custoDialog = new Dialog(StorageDemoActivity.this);
-        custoDialog.setContentView(R.layout.tika_licence_layout);
+        custoDialog.setContentView(R.layout.licence_layout);
 
         Window window = custoDialog.getWindow();
         window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
@@ -426,6 +444,14 @@ public class StorageDemoActivity extends AppCompatActivity {
             }
         });
         custoDialog.show();
+    }
+
+    private void getImageMetadata(Uri uri) throws FileNotFoundException {
+
+
+        InputStream inputStream =
+                getContentResolver().openInputStream(uri);
+
     }
 }
 

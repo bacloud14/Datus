@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+//apply plugin: 'proguard'
 apply plugin: 'com.google.android.gms.oss-licenses-plugin'
 
 android {
@@ -8,31 +9,75 @@ android {
         applicationId "com.bacloud.datus"
         minSdkVersion 26
         targetSdkVersion 29
-        versionCode 1
-        versionName "1.0"
+        versionCode 3
+        versionName "3.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            minifyEnabled true
+            shrinkResources true
+//            proguardFile getDefaultProguardFile('proguard-android-optimize.txt')
+//            proguardFile 'proguard-project.txt'
+//            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+//        configurations.all {
+//            resolutionStrategy {
+//                dependencySubstitution {
+//                    substitute module('net.sf.proguard:proguard-gradle') with module('com.guardsquare:proguard-gradle:7.0.0')
+//                }
+//            }
+//        }
+    }
+//    packagingOptions {
+//        exclude 'META-INF/**'
+//        exclude 'mozilla/public-suffix-list.txt'
+//    }
+
+
+}
+
+configurations {
+    all{
+        exclude group: 'commons-logging', module: 'commons-logging'
     }
 }
 
 dependencies {
+//    implementation 'androidx.multidex:multidex:2.0.1'
     implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.1'
     implementation 'com.google.android.gms:play-services-oss-licenses:17.0.0'
+// https://mvnrepository.com/artifact/com.drewnoakes/metadata-extractor
+    implementation group: 'com.drewnoakes', name: 'metadata-extractor', version: '2.14.0'
 
-    implementation 'org.apache.tika:tika-core:1.11'
 
+// https://mvnrepository.com/artifact/org.apache.xmlbeans/xmlbeans
+//    compile group: 'org.apache.xmlbeans', name: 'xmlbeans', version: '3.1.0'
 // https://mvnrepository.com/artifact/commons-io/commons-io
-    compile group: 'commons-io', name: 'commons-io', version: '2.8.0'
+    compile (group: 'commons-io', name: 'commons-io', version: '2.8.0')
+    // https://mvnrepository.com/artifact/xerces/xercesImpl
+
+// https://mvnrepository.com/artifact/xerces/xercesImpl
+//    compile group: 'xerces', name: 'xercesImpl', version: '2.0.0'
+
+// https://mvnrepository.com/artifact/org.apache.xmlbeans/xmlbeans
+//    compile group: 'org.apache.xmlbeans', name: 'xmlbeans', version: '2.3.0'
+
+//    implementation 'org.apache.tika:tika-core:1.12'
+    implementation 'org.apache.tika:tika-core:1.12'
+    // https://mvnrepository.com/artifact/com.github.jai-imageio/jai-imageio-core
+//    compile group: 'com.github.jai-imageio', name: 'jai-imageio-core', version: '1.4.0'
+
 
     api 'com.google.android.material:material:1.3.0-alpha02'
 
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test:runner:1.3.0'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
+
 }

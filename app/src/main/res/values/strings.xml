@@ -5,4 +5,5 @@
     <string name="app_name">Datus</string>
     <string name="thanks">Thanks to Apache Tika and:</string>
     <string name="tika">Apache Tika</string>
+    <string name="drewnoakes">Drewnoakes metadata-extractor</string>
 </resources>
