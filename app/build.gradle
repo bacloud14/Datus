@@ -9,8 +9,8 @@ android {
         applicationId "com.bacloud.datus"
         minSdkVersion 26
         targetSdkVersion 29
-        versionCode 3
-        versionName "3.0"
+        versionCode 5
+        versionName "5.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     compileOptions {
@@ -33,19 +33,19 @@ android {
 //            }
 //        }
     }
-//    packagingOptions {
-//        exclude 'META-INF/**'
-//        exclude 'mozilla/public-suffix-list.txt'
-//    }
-
-
-}
-
-configurations {
-    all{
-        exclude group: 'commons-logging', module: 'commons-logging'
+    packagingOptions {
+        exclude 'META-INF/**'
+        exclude 'mozilla/public-suffix-list.txt'
     }
+
+
 }
+
+//configurations {
+//    all{
+//        exclude group: 'commons-logging', module: 'commons-logging'
+//    }
+//}
 
 dependencies {
 //    implementation 'androidx.multidex:multidex:2.0.1'
@@ -54,7 +54,8 @@ dependencies {
     implementation 'com.google.android.gms:play-services-oss-licenses:17.0.0'
 // https://mvnrepository.com/artifact/com.drewnoakes/metadata-extractor
     implementation group: 'com.drewnoakes', name: 'metadata-extractor', version: '2.14.0'
-
+// https://mvnrepository.com/artifact/org.apache.pdfbox/pdfbox
+    implementation 'com.tom_roush:pdfbox-android:1.8.10.1'
 
 // https://mvnrepository.com/artifact/org.apache.xmlbeans/xmlbeans
 //    compile group: 'org.apache.xmlbeans', name: 'xmlbeans', version: '3.1.0'

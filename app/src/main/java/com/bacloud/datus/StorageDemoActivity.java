@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetManager;
 import android.database.Cursor;
+
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -28,6 +29,10 @@ import com.drew.imaging.ImageProcessingException;
 import com.drew.metadata.Directory;
 import com.drew.metadata.Tag;
 import com.google.android.gms.oss.licenses.OssLicensesMenuActivity;
+import com.tom_roush.pdfbox.pdmodel.PDDocumentInformation;
+import com.tom_roush.pdfbox.util.PDFBoxResourceLoader;
+
+import com.tom_roush.pdfbox.pdmodel.PDDocument;
 
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaException;
@@ -45,7 +50,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.GregorianCalendar;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -149,12 +156,20 @@ public class StorageDemoActivity extends AppCompatActivity {
                         } catch (TikaException e) {
                             e.printStackTrace();
                         }
+
+
                         textView.setText(Html.fromHtml(output));
 
-                        ArrayList<String> metadata = getImageAndVideosMetadata(currentUri);
-                        if (metadata != null) {
+                        ArrayList<String> imgMetadata = getImageAndVideosMetadata(currentUri);
+                        ArrayList<String> pdfMetadata = new ArrayList<String>();
+                        if (extention.equals(".pdf")) {
+                            pdfMetadata = getPdfMetadata(currentUri);
+                            System.out.println(pdfMetadata);
+                        }
+                        imgMetadata.addAll(pdfMetadata);
+                        if (!imgMetadata.isEmpty() || !pdfMetadata.isEmpty()) {
                             StringBuilder builder = new StringBuilder();
-                            for (String value : metadata) {
+                            for (String value : imgMetadata) {
                                 builder.append(value);
                             }
                             String text = "<small>" + builder.toString() + "</small>";
@@ -237,15 +252,52 @@ public class StorageDemoActivity extends AppCompatActivity {
         return fileName;
     }
 
+    public static String format(GregorianCalendar calendar) {
+        SimpleDateFormat fmt = new SimpleDateFormat("dd-MMM-yyyy");
+        fmt.setCalendar(calendar);
+        String dateFormatted = fmt.format(calendar.getTime());
+
+        return dateFormatted;
+    }
+
+    private ArrayList<String> getPdfMetadata(Uri uri) throws IOException {
+        InputStream inputStream = getContentResolver().openInputStream(uri);
+        PDFBoxResourceLoader.init(getApplicationContext());
+        PDDocument pdf = PDDocument.load(inputStream);
+        PDDocumentInformation info = pdf.getDocumentInformation();
+
+        String title = info.getTitle() == null ? "" : ("<font color='#3498DB'>Title= </font>" + info.getTitle() + "<br>");
+        String author = info.getAuthor() == null ? "" : ("<font color='#3498DB'>Author= </font>" + info.getAuthor() + "<br>");
+        String subject = info.getSubject() == null ? "" : ("<font color='#3498DB'>Subject= </font>" + info.getSubject() + "<br>");
+        String keywords = info.getKeywords() == null ? "" : ("<font color='#3498DB'>Keywords= </font>" + info.getKeywords() + "<br>");
+        String creator = info.getCreator() == null ? "" : ("<font color='#3498DB'>Creator= </font>" + info.getCreator() + "<br>");
+        String producer = info.getProducer() == null ? "" : ("<font color='#3498DB'>Producer= </font>" + info.getProducer() + "<br>");
+        String creationDate = info.getCreationDate() == null ? "" : ("<font color='#3498DB'>Creation Date= </font>" + format((GregorianCalendar) info.getCreationDate()) + "<br>");
+        String modificationDate = info.getModificationDate() == null ? "" : ("<font color='#3498DB'>Modification Date= </font>" + format((GregorianCalendar) info.getModificationDate()) + "<br>");
+        String trapped = info.getTrapped() == null ? "" : ("<font color='#3498DB'>Trapped= </font>" + info.getTrapped() + "><br>");
+        ArrayList<String> metadata = new ArrayList<String>();
+        metadata.add(title);
+        metadata.add(author);
+        metadata.add(subject);
+        metadata.add(keywords);
+        metadata.add(creator);
+        metadata.add(producer);
+        metadata.add(creationDate);
+        metadata.add(modificationDate);
+        metadata.add(trapped);
+        return metadata;
+    }
 
     private ArrayList<String> getImageAndVideosMetadata(Uri uri) throws IOException {
         InputStream inputStream = getContentResolver().openInputStream(uri);
+
+
         ArrayList<String> directories = new ArrayList<String>();
         try {
             com.drew.metadata.Metadata metadata2 = ImageMetadataReader.readMetadata(inputStream);
             for (Directory directory : metadata2.getDirectories()) {
                 for (Tag tag : directory.getTags()) {
-                    directories.add(String.format("<font color='#3498DB'>[%s]</font> - %s = %s<br>",
+                    directories.add(String.format("<font color='#3498DB'>%s - %s= </font> %s<br>",
                             directory.getName(), tag.getTagName(), tag.getDescription()));
                 }
                 if (directory.hasErrors()) {
@@ -255,7 +307,7 @@ public class StorageDemoActivity extends AppCompatActivity {
                 }
             }
         } catch (ImageProcessingException e) {
-            return null;
+            return new ArrayList<String>();
         }
         return directories;
 
