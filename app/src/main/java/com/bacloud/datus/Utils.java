@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.text.DecimalFormat;
 
 public class Utils {
     /* Get uri related content real local file path. */
@@ -274,19 +275,18 @@ public class Utils {
         return ret;
     }
 
-    static void bimboum(Path file) throws IOException {
-        BasicFileAttributes attr = Files.readAttributes(file, BasicFileAttributes.class);
-
-        System.out.println("creationTime: " + attr.creationTime());
-        System.out.println("lastAccessTime: " + attr.lastAccessTime());
-        System.out.println("lastModifiedTime: " + attr.lastModifiedTime());
-
-        System.out.println("isDirectory: " + attr.isDirectory());
-        System.out.println("isOther: " + attr.isOther());
-        System.out.println("isRegularFile: " + attr.isRegularFile());
-        System.out.println("isSymbolicLink: " + attr.isSymbolicLink());
-        System.out.println("size: " + attr.size());
+    public static String hex(byte[] bytes) {
+        StringBuilder result = new StringBuilder();
+        for (byte aByte : bytes) {
+            result.append(String.format("%02x ", aByte));
+        }
+        return result.toString();
     }
 
-
+    public static String readableFileSize(long size) {
+        if (size <= 0) return "0";
+        final String[] units = new String[]{"B", "kB", "MB", "GB", "TB"};
+        int digitGroups = (int) (Math.log10(size) / Math.log10(1024));
+        return new DecimalFormat("#,##0.#").format(size / Math.pow(1024, digitGroups)) + " " + units[digitGroups];
+    }
 }

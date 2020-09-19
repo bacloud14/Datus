@@ -3,7 +3,7 @@
     <string name="open_string">Open</string>
     <string name="licences_string">Licences</string>
     <string name="app_name">Datus</string>
-    <string name="thanks">Thanks to Apache Tika and:</string>
+    <string name="thanks">Special thanks to:</string>
     <string name="tika">Apache Tika</string>
     <string name="drewnoakes">Drewnoakes metadata-extractor</string>
 </resources>

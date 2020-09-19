@@ -10,7 +10,6 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.ParcelFileDescriptor;
 import android.provider.OpenableColumns;
 import android.text.Html;
 import android.text.Layout;
@@ -45,14 +44,10 @@ import org.apache.tika.mime.MimeType;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.GregorianCalendar;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -66,22 +61,6 @@ public class StorageDemoActivity extends AppCompatActivity {
 
     private long size = 0;
 
-    public static String hex(byte[] bytes) {
-        StringBuilder result = new StringBuilder();
-        for (byte aByte : bytes) {
-            result.append(String.format("%02x ", aByte));
-            // upper case
-            // result.append(String.format("%02X", aByte));
-        }
-        return result.toString();
-    }
-
-    public static String readableFileSize(long size) {
-        if (size <= 0) return "0";
-        final String[] units = new String[]{"B", "kB", "MB", "GB", "TB"};
-        int digitGroups = (int) (Math.log10(size) / Math.log10(1024));
-        return new DecimalFormat("#,##0.#").format(size / Math.pow(1024, digitGroups)) + " " + units[digitGroups];
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,20 +78,18 @@ public class StorageDemoActivity extends AppCompatActivity {
                                  Intent resultData) {
 
         super.onActivityResult(requestCode, resultCode, resultData);
-        Uri currentUri = null;
+        Uri currentUri;
         String content = "";
         String output = "";
         String alias = "";
         MediaTypeRegistry registry = MediaTypeRegistry.getDefaultRegistry();
-//        listAllTypes();
         if (resultCode == Activity.RESULT_OK) {
 
             if (requestCode == SAVE_REQUEST_CODE) {
-
-                if (resultData != null) {
-                    currentUri = resultData.getData();
-                    writeFileContent(currentUri);
-                }
+//                if (resultData != null) {
+//                    currentUri = resultData.getData();
+//                    writeFileContent(currentUri);
+//                }
             } else if (requestCode == OPEN_REQUEST_CODE) {
 
                 if (resultData != null) {
@@ -121,51 +98,46 @@ public class StorageDemoActivity extends AppCompatActivity {
                     try {
                         String language = "not a plain text or not identified";
                         String type;
-                        String extention = "";
+                        String extension = "";
                         String size = "";
+                        // Tika client code for file extension detection
                         try {
-                            MediaType mimetype = getMediaType(currentUri);
-                            if (mimetype.getType().equals("text"))
+                            MediaType mimeType = detectMediaType(currentUri);
+                            type = mimeType.getType() == null ? "type not identified" : mimeType.getType();
+                            if (mimeType.getType().equals("text"))
                                 content = readFileContent(currentUri, true);
                             else
                                 content = readFileContent(currentUri, false);
 
-                            if (mimetype.getType().equals("text") && mimetype.getSubtype().equals("plain")) {
+                            if (mimeType.getType().equals("text") && mimeType.getSubtype().equals("plain")) {
                                 language = detectLang(content);
                             }
                             size = getMediaSize(currentUri);
-//                            String native_tags = getMetaDataNative(currentUri);
                             String[] native_tags = dumpImageMetaData(this, currentUri);
-//                            String path_to_file = Utils.getPath(this, currentUri);
-//                            Utils.bimboum(Paths.get(path_to_file.substring(0,20)+native_tags[0]));
-//                            BasicFileAttributes attr = getMetaDataNative(currentUri);
-                            Set<MediaType> aliases = registry.getAliases(mimetype);
-                            alias = aliases.isEmpty() ? "" : "<br><font color='#008577'>" + mimetype + " is known as " + aliases + "</font>";
-
-                            extention = detectExtension(mimetype);
-                            type = mimetype.getType();
-
+                            Set<MediaType> aliases = registry.getAliases(mimeType);
+                            alias = aliases.isEmpty() ? "" : "<br><font color='#008577'>" + mimeType + " is known as " + aliases + "</font>";
+                            extension = detectExtension(mimeType);
 
                             output = "Name: " + native_tags[0] +
                                     "<br><font color='#1ABC9C'>Type: " + type + "</font>" +
                                     alias +
                                     "<br>Language: " + language +
-                                    "<br>Extension: " + extention +
+                                    "<br>Extension: " + extension +
                                     "<br>Size: " + size;
 
                         } catch (TikaException e) {
                             e.printStackTrace();
                         }
 
-
                         textView.setText(Html.fromHtml(output));
 
+                        // PDF and image metadata detection
+                        // PdfBox-Android and com.drewnoakes metadata-extractor
                         ArrayList<String> imgMetadata = getImageAndVideosMetadata(currentUri);
                         ArrayList<String> pdfMetadata = new ArrayList<String>();
-                        if (extention.equals(".pdf")) {
+                        if (extension.equals(".pdf"))
                             pdfMetadata = getPdfMetadata(currentUri);
-                            System.out.println(pdfMetadata);
-                        }
+
                         imgMetadata.addAll(pdfMetadata);
                         if (!imgMetadata.isEmpty() || !pdfMetadata.isEmpty()) {
                             StringBuilder builder = new StringBuilder();
@@ -219,7 +191,6 @@ public class StorageDemoActivity extends AppCompatActivity {
                 // a rule, check if it's null before assigning to an int.  This will
                 // happen often:  The storage API allows for remote files, whose
                 // size might not be locally known.
-                size = null;
                 if (!cursor.isNull(sizeIndex)) {
                     // Technically the column stores an int, but cursor.getString()
                     // will do the conversion automatically.
@@ -234,67 +205,22 @@ public class StorageDemoActivity extends AppCompatActivity {
         return new String[]{displayName, size};
     }
 
-    public static String getFileNameByUri(Context context, Uri uri) {
-        String fileName = "unknown";//default fileName
-        Uri filePathUri = uri;
-        if (uri.getScheme().toString().compareTo("content") == 0) {
-            Cursor cursor = context.getContentResolver().query(uri, null, null, null, null);
-            if (cursor.moveToFirst()) {
-                int column_index = cursor.getColumnIndexOrThrow("_display_name");//Instead of "MediaStore.Images.Media.DATA" can be used "_data"
-                filePathUri = Uri.parse(cursor.getString(0));
-                fileName = filePathUri.getLastPathSegment().toString();
-            }
-        } else if (uri.getScheme().compareTo("file") == 0) {
-            fileName = filePathUri.getLastPathSegment().toString();
-        } else {
-            fileName = fileName + "_" + filePathUri.getLastPathSegment();
-        }
-        return fileName;
-    }
-
-    public static String format(GregorianCalendar calendar) {
-        SimpleDateFormat fmt = new SimpleDateFormat("dd-MMM-yyyy");
-        fmt.setCalendar(calendar);
-        String dateFormatted = fmt.format(calendar.getTime());
-
-        return dateFormatted;
-    }
 
     private ArrayList<String> getPdfMetadata(Uri uri) throws IOException {
         InputStream inputStream = getContentResolver().openInputStream(uri);
         PDFBoxResourceLoader.init(getApplicationContext());
         PDDocument pdf = PDDocument.load(inputStream);
         PDDocumentInformation info = pdf.getDocumentInformation();
-
-        String title = info.getTitle() == null ? "" : ("<font color='#3498DB'>Title= </font>" + info.getTitle() + "<br>");
-        String author = info.getAuthor() == null ? "" : ("<font color='#3498DB'>Author= </font>" + info.getAuthor() + "<br>");
-        String subject = info.getSubject() == null ? "" : ("<font color='#3498DB'>Subject= </font>" + info.getSubject() + "<br>");
-        String keywords = info.getKeywords() == null ? "" : ("<font color='#3498DB'>Keywords= </font>" + info.getKeywords() + "<br>");
-        String creator = info.getCreator() == null ? "" : ("<font color='#3498DB'>Creator= </font>" + info.getCreator() + "<br>");
-        String producer = info.getProducer() == null ? "" : ("<font color='#3498DB'>Producer= </font>" + info.getProducer() + "<br>");
-        String creationDate = info.getCreationDate() == null ? "" : ("<font color='#3498DB'>Creation Date= </font>" + format((GregorianCalendar) info.getCreationDate()) + "<br>");
-        String modificationDate = info.getModificationDate() == null ? "" : ("<font color='#3498DB'>Modification Date= </font>" + format((GregorianCalendar) info.getModificationDate()) + "<br>");
-        String trapped = info.getTrapped() == null ? "" : ("<font color='#3498DB'>Trapped= </font>" + info.getTrapped() + "><br>");
-        ArrayList<String> metadata = new ArrayList<String>();
-        metadata.add(title);
-        metadata.add(author);
-        metadata.add(subject);
-        metadata.add(keywords);
-        metadata.add(creator);
-        metadata.add(producer);
-        metadata.add(creationDate);
-        metadata.add(modificationDate);
-        metadata.add(trapped);
-        return metadata;
+        inputStream.close();
+        return PDDocumentInformationFormat.format(info);
     }
 
     private ArrayList<String> getImageAndVideosMetadata(Uri uri) throws IOException {
         InputStream inputStream = getContentResolver().openInputStream(uri);
-
-
         ArrayList<String> directories = new ArrayList<String>();
         try {
             com.drew.metadata.Metadata metadata2 = ImageMetadataReader.readMetadata(inputStream);
+            inputStream.close();
             for (Directory directory : metadata2.getDirectories()) {
                 for (Tag tag : directory.getTags()) {
                     directories.add(String.format("<font color='#3498DB'>%s - %s= </font> %s<br>",
@@ -307,13 +233,13 @@ public class StorageDemoActivity extends AppCompatActivity {
                 }
             }
         } catch (ImageProcessingException e) {
-            return new ArrayList<String>();
+            return new ArrayList<>();
         }
         return directories;
 
     }
 
-    // limit content parsing to some extent not to be so heavy
+    // Read limit content parsing to some extent not to be so heavy
     private String readFileContent(Uri uri, boolean textual) throws IOException {
 
         InputStream inputStream = getContentResolver().openInputStream(uri);
@@ -335,7 +261,7 @@ public class StorageDemoActivity extends AppCompatActivity {
             byte fileContent[] = new byte[200];
             inputStream.read(fileContent, 0, 200);
             String s = new String(fileContent);
-            String hexCode = "<small>" + hex(fileContent) + "</small>";
+            String hexCode = "<small>" + Utils.hex(fileContent) + "</small>";
             textView3.setText(Html.fromHtml(hexCode));
             inputStream.close();
             return s;
@@ -344,29 +270,30 @@ public class StorageDemoActivity extends AppCompatActivity {
 
     }
 
-    private void writeFileContent(Uri uri) {
-        try {
-            ParcelFileDescriptor pfd =
-                    this.getContentResolver().
-                            openFileDescriptor(uri, "w");
+    /*
+        private void writeFileContent(Uri uri) {
+            try {
+                ParcelFileDescriptor pfd =
+                        this.getContentResolver().
+                                openFileDescriptor(uri, "w");
 
-            FileOutputStream fileOutputStream =
-                    new FileOutputStream(pfd.getFileDescriptor());
+                FileOutputStream fileOutputStream =
+                        new FileOutputStream(pfd.getFileDescriptor());
 
-            String textContent =
-                    textView.getText().toString();
+                String textContent =
+                        textView.getText().toString();
 
-            fileOutputStream.write(textContent.getBytes());
+                fileOutputStream.write(textContent.getBytes());
 
-            fileOutputStream.close();
-            pfd.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+                fileOutputStream.close();
+                pfd.close();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-    }
-
+    */
     public void openFile(View view) {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -374,20 +301,7 @@ public class StorageDemoActivity extends AppCompatActivity {
         startActivityForResult(intent, OPEN_REQUEST_CODE);
     }
 
-    public void showLicences(View view) {
-        startActivity(new Intent(this, OssLicensesMenuActivity.class));
-        OssLicensesMenuActivity.setActivityTitle(getString(R.string.thanks));
-
-        Toast.makeText(getBaseContext(), "Plus the fabulous Apache Tika https://tika.apache.org/license.html",
-                Toast.LENGTH_LONG).show();
-
-//        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-//        intent.addCategory(Intent.CATEGORY_OPENABLE);
-//        intent.setType("text/plain");
-//        startActivityForResult(intent, SAVE_REQUEST_CODE);
-    }
-
-    public MediaType getMediaType(Uri uri) throws TikaException, IOException {
+    public MediaType detectMediaType(Uri uri) throws TikaException, IOException {
         InputStream inputStream =
                 getContentResolver().openInputStream(uri);
         TikaConfig tika = new TikaConfig();
@@ -406,7 +320,7 @@ public class StorageDemoActivity extends AppCompatActivity {
     }
 
     public String detectExtension(MediaType mediatype) {
-        TikaConfig tika = null;
+        TikaConfig tika;
         String extension = "";
         AtomicReference<String> mimeTypeRef = new AtomicReference<>(null);
         mimeTypeRef.set(mediatype.toString());
@@ -415,7 +329,7 @@ public class StorageDemoActivity extends AppCompatActivity {
         try {
             MimeType mimetype;
             tika = new TikaConfig();
-            mimetype = tika.getMimeRepository().forName(mimeType.toString());
+            mimetype = tika.getMimeRepository().forName(mimeType);
             extension = mimetype.getExtension();
 
             if (mimeType != null && mimeType.equals("application/gzip") && extension.equals(".tgz")) {
@@ -433,19 +347,19 @@ public class StorageDemoActivity extends AppCompatActivity {
     }
 
     public String getMediaSize(Uri uri) throws FileNotFoundException {
-        InputStream inputStream2 =
+        InputStream inputStream =
                 getContentResolver().openInputStream(uri);
-        try (final TikaInputStream tis = TikaInputStream.get(inputStream2)) {
+        try (final TikaInputStream tis = TikaInputStream.get(inputStream)) {
             size = tis.getLength();
         } catch (IOException e) {
             e.printStackTrace();
         }
         try {
-            inputStream2.close();
+            inputStream.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        String sizeFormatted = readableFileSize(size);
+        String sizeFormatted = Utils.readableFileSize(size);
         return sizeFormatted;
     }
 
@@ -498,13 +412,15 @@ public class StorageDemoActivity extends AppCompatActivity {
         custoDialog.show();
     }
 
-    private void getImageMetadata(Uri uri) throws FileNotFoundException {
+    public void showLicences(View view) {
+        startActivity(new Intent(this, OssLicensesMenuActivity.class));
+        OssLicensesMenuActivity.setActivityTitle(getString(R.string.thanks));
 
-
-        InputStream inputStream =
-                getContentResolver().openInputStream(uri);
-
+        Toast.makeText(getBaseContext(), "Special thanks to Apache Tika, drewnoaks's metadata-extractor and TomRoush's PdfBox-Android ",
+                Toast.LENGTH_LONG).show();
     }
+
+
 }
 
 
