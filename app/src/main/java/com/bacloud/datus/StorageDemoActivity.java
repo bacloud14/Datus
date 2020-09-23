@@ -6,10 +6,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetManager;
 import android.database.Cursor;
-
+import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.ParcelFileDescriptor;
 import android.provider.OpenableColumns;
 import android.text.Html;
 import android.text.Layout;
@@ -28,10 +29,9 @@ import com.drew.imaging.ImageProcessingException;
 import com.drew.metadata.Directory;
 import com.drew.metadata.Tag;
 import com.google.android.gms.oss.licenses.OssLicensesMenuActivity;
+import com.tom_roush.pdfbox.pdmodel.PDDocument;
 import com.tom_roush.pdfbox.pdmodel.PDDocumentInformation;
 import com.tom_roush.pdfbox.util.PDFBoxResourceLoader;
-
-import com.tom_roush.pdfbox.pdmodel.PDDocument;
 
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaException;
@@ -47,6 +47,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
@@ -127,6 +128,10 @@ public class StorageDemoActivity extends AppCompatActivity {
 
                         } catch (TikaException e) {
                             e.printStackTrace();
+                        } catch (IllegalAccessException e) {
+                            e.printStackTrace();
+                        } catch (InstantiationException e) {
+                            e.printStackTrace();
                         }
 
                         textView.setText(Html.fromHtml(output));
@@ -140,20 +145,27 @@ public class StorageDemoActivity extends AppCompatActivity {
 
                         imgMetadata.addAll(pdfMetadata);
                         if (!imgMetadata.isEmpty() || !pdfMetadata.isEmpty()) {
-                            StringBuilder builder = new StringBuilder();
-                            for (String value : imgMetadata) {
-                                builder.append(value);
-                            }
-                            String text = "<small>" + builder.toString() + "</small>";
+                            String text = stringBuilderFormatted(imgMetadata);
                             textView2.setText(Html.fromHtml(text));
                         } else {
-                            if (content.length() >= 200)
-                                textView2.setText(Html.fromHtml("<small>" + content.substring(0, 200) + "</small>"));
-                            else
-                                textView2.setText(Html.fromHtml("<small>" + content + "</small>"));
+
+                            ArrayList<String> nativeMetadata = new ArrayList<>();
+
+                            nativeMetadata = nativeGetMetadata(currentUri);
+
+                            if (!nativeMetadata.isEmpty()) {
+                                String text = stringBuilderFormatted(nativeMetadata);
+                                textView2.setText(Html.fromHtml(text));
+                            } else {
+                                if (content.length() >= 200)
+                                    textView2.setText(Html.fromHtml("<small>" + content.substring(0, 200) + "</small>"));
+                                else
+                                    textView2.setText(Html.fromHtml("<small>" + content + "</small>"));
+                            }
+
                         }
 
-                    } catch (IOException e) {
+                    } catch (IOException | IllegalAccessException e) {
                         // Handle error here
                         e.printStackTrace();
                     }
@@ -164,6 +176,37 @@ public class StorageDemoActivity extends AppCompatActivity {
         Toast.makeText(getBaseContext(), "success",
                 Toast.LENGTH_LONG).show();
 
+    }
+
+    private String stringBuilderFormatted(ArrayList<String> imgMetadata) {
+        StringBuilder builder = new StringBuilder();
+        for (String value : imgMetadata) {
+            builder.append(value);
+        }
+        String text = "<small>" + builder.toString() + "</small>";
+        return text;
+    }
+
+    private ArrayList<String> nativeGetMetadata(Uri currentUri) throws IOException, IllegalAccessException {
+        ArrayList<String> directories = new ArrayList<String>();
+        MediaMetadataRetriever metaRetriever = new MediaMetadataRetriever();
+        ParcelFileDescriptor pfd =
+                this.getContentResolver().
+                        openFileDescriptor(currentUri, "r");
+
+        metaRetriever.setDataSource(pfd.getFileDescriptor());
+        for (Field f : MediaMetadataRetriever.class.getFields()) {
+            f.setAccessible(true);
+            Object value = f.get(metaRetriever);
+            Object o = metaRetriever.extractMetadata((Integer) value);
+            if (o != null) {
+                directories.add(String.format("<font color='#3498DB'>%s= </font> %s<br>",
+                        f.getName(), o));
+            }
+        }
+        metaRetriever.close();
+        pfd.close();
+        return directories;
     }
 
     public String[] dumpImageMetaData(Context context, Uri uri) {
@@ -240,10 +283,9 @@ public class StorageDemoActivity extends AppCompatActivity {
     }
 
     // Read limit content parsing to some extent not to be so heavy
-    private String readFileContent(Uri uri, boolean textual) throws IOException {
+    private String readFileContent(Uri uri, boolean textual) throws IOException, InstantiationException, IllegalAccessException {
 
         InputStream inputStream = getContentResolver().openInputStream(uri);
-
         if (textual) {
             BufferedReader reader =
                     new BufferedReader(new InputStreamReader(
