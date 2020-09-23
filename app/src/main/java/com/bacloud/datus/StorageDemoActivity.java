@@ -101,9 +101,12 @@ public class StorageDemoActivity extends AppCompatActivity {
                         String type;
                         String extension = "";
                         String size = "";
-                        // Tika client code for file extension detection
+                        MediaType mimeType = null;
+                        // FILE EXTENSION DETECTION :: Tika client code for
+                        // FILE EXTENSION DETECTION :: Tika client code for
+                        // FILE EXTENSION DETECTION :: Tika client code for
                         try {
-                            MediaType mimeType = detectMediaType(currentUri);
+                            mimeType = detectMediaType(currentUri);
                             type = mimeType.getType() == null ? "type not identified" : mimeType.getType();
                             if (mimeType.getType().equals("text"))
                                 content = readFileContent(currentUri, true);
@@ -136,35 +139,43 @@ public class StorageDemoActivity extends AppCompatActivity {
 
                         textView.setText(Html.fromHtml(output));
 
-                        // PDF and image metadata detection
+                        // METADATA DETECTION
+                        // METADATA DETECTION
+                        // METADATA DETECTION
+                        // PDF and IMAGE metadata detection
                         // PdfBox-Android and com.drewnoakes metadata-extractor
-                        ArrayList<String> imgMetadata = getImageAndVideosMetadata(currentUri);
+                        ArrayList<String> mediaMetadata = getImageAndVideosMetadata(currentUri);
                         ArrayList<String> pdfMetadata = new ArrayList<String>();
                         if (extension.equals(".pdf"))
                             pdfMetadata = getPdfMetadata(currentUri);
 
-                        imgMetadata.addAll(pdfMetadata);
-                        if (!imgMetadata.isEmpty() || !pdfMetadata.isEmpty()) {
-                            String text = stringBuilderFormatted(imgMetadata);
+                        mediaMetadata.addAll(pdfMetadata);
+                        if (!mediaMetadata.isEmpty() || !pdfMetadata.isEmpty()) {
+                            String text = stringBuilderFormatted(mediaMetadata);
                             textView2.setText(Html.fromHtml(text));
                         } else {
-
+                            // NATIVE MEDIA METADATA DETECTION
+                            // NATIVE MEDIA METADATA DETECTION
+                            // NATIVE MEDIA METADATA DETECTION
                             ArrayList<String> nativeMetadata = new ArrayList<>();
-
-                            nativeMetadata = nativeGetMetadata(currentUri);
+                            if(mimeType !=null && (mimeType.getType().equals("audio") ||
+                                    mimeType.getType().equals("image") ||
+                                    mimeType.getType().equals("video")))
+                                nativeMetadata = nativeGetMetadata(currentUri);
 
                             if (!nativeMetadata.isEmpty()) {
                                 String text = stringBuilderFormatted(nativeMetadata);
                                 textView2.setText(Html.fromHtml(text));
                             } else {
+                                // RAW CONTENT OUTPUT
+                                // RAW CONTENT OUTPUT
+                                // RAW CONTENT OUTPUT
                                 if (content.length() >= 200)
                                     textView2.setText(Html.fromHtml("<small>" + content.substring(0, 200) + "</small>"));
                                 else
                                     textView2.setText(Html.fromHtml("<small>" + content + "</small>"));
                             }
-
                         }
-
                     } catch (IOException | IllegalAccessException e) {
                         // Handle error here
                         e.printStackTrace();
@@ -172,7 +183,6 @@ public class StorageDemoActivity extends AppCompatActivity {
                 }
             }
         }
-
         Toast.makeText(getBaseContext(), "success",
                 Toast.LENGTH_LONG).show();
 
