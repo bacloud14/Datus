@@ -27,22 +27,60 @@ import java.util.Comparator;
  * @version 2013-12-11
  */
 public class FileUtils {
-    private FileUtils() {
-    } //private constructor to enforce Singleton pattern
-
-    /**
-     * TAG for log messages.
-     */
-    static final String TAG = "FileUtils";
-    private static final boolean DEBUG = false; // Set to true to enable logging
-
     public static final String MIME_TYPE_AUDIO = "audio/*";
     public static final String MIME_TYPE_TEXT = "text/*";
     public static final String MIME_TYPE_IMAGE = "image/*";
     public static final String MIME_TYPE_VIDEO = "video/*";
     public static final String MIME_TYPE_APP = "application/*";
-
     public static final String HIDDEN_PREFIX = ".";
+    public static final String AUTHORITY = "com.android.providers.media.documents";
+    /**
+     * TAG for log messages.
+     */
+    static final String TAG = "FileUtils";
+    private static final boolean DEBUG = false; // Set to true to enable logging
+    /**
+     * File and folder comparator. TODO Expose sorting option method
+     *
+     * @author paulburke
+     */
+    public static Comparator<File> sComparator = new Comparator<File>() {
+        @Override
+        public int compare(File f1, File f2) {
+            // Sort alphabetically by lower case, which is much cleaner
+            return f1.getName().toLowerCase().compareTo(
+                    f2.getName().toLowerCase());
+        }
+    };
+    /**
+     * File (not directories) filter.
+     *
+     * @author paulburke
+     */
+    public static FileFilter sFileFilter = new FileFilter() {
+        @Override
+        public boolean accept(File file) {
+            final String fileName = file.getName();
+            // Return files only (not directories) and skip hidden files
+            return file.isFile() && !fileName.startsWith(HIDDEN_PREFIX);
+        }
+    };
+    /**
+     * Folder (directories) filter.
+     *
+     * @author paulburke
+     */
+    public static FileFilter sDirFilter = new FileFilter() {
+        @Override
+        public boolean accept(File file) {
+            final String fileName = file.getName();
+            // Return directories only and skip hidden directories
+            return file.isDirectory() && !fileName.startsWith(HIDDEN_PREFIX);
+        }
+    };
+
+    private FileUtils() {
+    } //private constructor to enforce Singleton pattern
 
     /**
      * Gets the extension of a file name, like ".png" or ".jpg".
@@ -143,8 +181,6 @@ public class FileUtils {
         File file = new File(getPath(context, uri));
         return getMimeType(file);
     }
-
-    public static final String AUTHORITY = "com.android.providers.media.documents";
 
     public static boolean isLocalStorageDocument(Uri uri) {
 
@@ -450,48 +486,6 @@ public class FileUtils {
         }
         return bm;
     }
-
-    /**
-     * File and folder comparator. TODO Expose sorting option method
-     *
-     * @author paulburke
-     */
-    public static Comparator<File> sComparator = new Comparator<File>() {
-        @Override
-        public int compare(File f1, File f2) {
-            // Sort alphabetically by lower case, which is much cleaner
-            return f1.getName().toLowerCase().compareTo(
-                    f2.getName().toLowerCase());
-        }
-    };
-
-    /**
-     * File (not directories) filter.
-     *
-     * @author paulburke
-     */
-    public static FileFilter sFileFilter = new FileFilter() {
-        @Override
-        public boolean accept(File file) {
-            final String fileName = file.getName();
-            // Return files only (not directories) and skip hidden files
-            return file.isFile() && !fileName.startsWith(HIDDEN_PREFIX);
-        }
-    };
-
-    /**
-     * Folder (directories) filter.
-     *
-     * @author paulburke
-     */
-    public static FileFilter sDirFilter = new FileFilter() {
-        @Override
-        public boolean accept(File file) {
-            final String fileName = file.getName();
-            // Return directories only and skip hidden directories
-            return file.isDirectory() && !fileName.startsWith(HIDDEN_PREFIX);
-        }
-    };
 
     /**
      * Get the Intent for selecting content to be used in an Intent Chooser.

@@ -15,7 +15,8 @@ public class PDDocumentInformationFormat {
 
         return dateFormatted;
     }
-    public static ArrayList<String> format(PDDocumentInformation info){
+
+    public static ArrayList<String> format(PDDocumentInformation info) {
         String title = info.getTitle() == null ? "" : ("<font color='#3498DB'>Title= </font>" + info.getTitle() + "<br>");
         String author = info.getAuthor() == null ? "" : ("<font color='#3498DB'>Author= </font>" + info.getAuthor() + "<br>");
         String subject = info.getSubject() == null ? "" : ("<font color='#3498DB'>Subject= </font>" + info.getSubject() + "<br>");

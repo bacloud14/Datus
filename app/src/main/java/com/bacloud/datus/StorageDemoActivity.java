@@ -23,6 +23,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.text.HtmlCompat;
 
 import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
@@ -56,9 +57,10 @@ public class StorageDemoActivity extends AppCompatActivity {
 
     private static final int OPEN_REQUEST_CODE = 41;
     private static final int SAVE_REQUEST_CODE = 42;
-    private static EditText textView;
-    private static EditText textView2;
-    private static EditText textView3;
+    private EditText textView;
+    private EditText textView2_1;
+    private TextView textView2_2;
+    private EditText textView3;
 
     private long size = 0;
 
@@ -70,7 +72,8 @@ public class StorageDemoActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_storage_demo);
         textView = (EditText) findViewById(R.id.fileText);
-        textView2 = (EditText) findViewById(R.id.fileText2);
+        textView2_1 = (EditText) findViewById(R.id.fileText2);
+        textView2_2 = (TextView) findViewById(R.id.preview2);
         textView3 = (EditText) findViewById(R.id.hex);
 
     }
@@ -82,7 +85,7 @@ public class StorageDemoActivity extends AppCompatActivity {
         Uri currentUri;
         String content = "";
         String output = "";
-        String alias = "";
+        String alias;
         MediaTypeRegistry registry = MediaTypeRegistry.getDefaultRegistry();
         if (resultCode == Activity.RESULT_OK) {
 
@@ -100,7 +103,7 @@ public class StorageDemoActivity extends AppCompatActivity {
                         String language = "not a plain text or not identified";
                         String type;
                         String extension = "";
-                        String size = "";
+                        String size;
                         MediaType mimeType = null;
                         // FILE EXTENSION DETECTION :: Tika client code for
                         // FILE EXTENSION DETECTION :: Tika client code for
@@ -122,58 +125,65 @@ public class StorageDemoActivity extends AppCompatActivity {
                             alias = aliases.isEmpty() ? "" : "<br><font color='#008577'>" + mimeType + " is known as " + aliases + "</font>";
                             extension = detectExtension(mimeType);
 
-                            output = "Name: " + native_tags[0] +
+                            output = "<small>Name: " + native_tags[0] +
                                     "<br><font color='#1ABC9C'>Type: " + type + "</font>" +
                                     alias +
                                     "<br>Language: " + language +
                                     "<br>Extension: " + extension +
-                                    "<br>Size: " + size;
+                                    "<br>Size: " + size + "</small>";
 
-                        } catch (TikaException e) {
-                            e.printStackTrace();
-                        } catch (IllegalAccessException e) {
-                            e.printStackTrace();
-                        } catch (InstantiationException e) {
+                        } catch (TikaException | IllegalAccessException | InstantiationException | RuntimeException e) {
+                            Toast.makeText(getBaseContext(), "failed",
+                                    Toast.LENGTH_LONG).show();
+
+                            output = "<small><font color='#C0392B'>ERROR: Datus is having hard time reading this media file. \n " +
+                                    "It is probably because the file has not been released by another application from a pending state.</font></small>";
                             e.printStackTrace();
                         }
 
-                        textView.setText(Html.fromHtml(output));
+                        textView.setText(HtmlCompat.fromHtml(output, HtmlCompat.FROM_HTML_MODE_LEGACY));
 
                         // METADATA DETECTION
                         // METADATA DETECTION
                         // METADATA DETECTION
                         // PDF and IMAGE metadata detection
                         // PdfBox-Android and com.drewnoakes metadata-extractor
-                        ArrayList<String> mediaMetadata = getImageAndVideosMetadata(currentUri);
-                        ArrayList<String> pdfMetadata = new ArrayList<String>();
+                        ArrayList<String> mediaMetadata = new ArrayList<>();
+                        try {
+                            mediaMetadata = getImageAndVideosMetadata(currentUri);
+                        } catch (RuntimeException e) {
+                            e.printStackTrace();
+                        }
+                        ArrayList<String> pdfMetadata = new ArrayList<>();
                         if (extension.equals(".pdf"))
                             pdfMetadata = getPdfMetadata(currentUri);
 
                         mediaMetadata.addAll(pdfMetadata);
                         if (!mediaMetadata.isEmpty() || !pdfMetadata.isEmpty()) {
                             String text = stringBuilderFormatted(mediaMetadata);
-                            textView2.setText(Html.fromHtml(text));
+                            textView2_1.setText(HtmlCompat.fromHtml(text, HtmlCompat.FROM_HTML_MODE_LEGACY));
                         } else {
                             // NATIVE MEDIA METADATA DETECTION
                             // NATIVE MEDIA METADATA DETECTION
                             // NATIVE MEDIA METADATA DETECTION
                             ArrayList<String> nativeMetadata = new ArrayList<>();
-                            if(mimeType !=null && (mimeType.getType().equals("audio") ||
+                            if (mimeType != null && (mimeType.getType().equals("audio") ||
                                     mimeType.getType().equals("image") ||
                                     mimeType.getType().equals("video")))
                                 nativeMetadata = nativeGetMetadata(currentUri);
 
                             if (!nativeMetadata.isEmpty()) {
                                 String text = stringBuilderFormatted(nativeMetadata);
-                                textView2.setText(Html.fromHtml(text));
+                                textView2_1.setText(HtmlCompat.fromHtml(text, HtmlCompat.FROM_HTML_MODE_LEGACY));
                             } else {
                                 // RAW CONTENT OUTPUT
                                 // RAW CONTENT OUTPUT
                                 // RAW CONTENT OUTPUT
+                                textView2_2.setText("ASCII preview of first bytes");
                                 if (content.length() >= 200)
-                                    textView2.setText(Html.fromHtml("<small>" + content.substring(0, 200) + "</small>"));
+                                    textView2_1.setText(HtmlCompat.fromHtml("<small>" + content.substring(0, 200) + "</small>", HtmlCompat.FROM_HTML_MODE_LEGACY));
                                 else
-                                    textView2.setText(Html.fromHtml("<small>" + content + "</small>"));
+                                    textView2_1.setText(HtmlCompat.fromHtml("<small>" + content + "</small>", HtmlCompat.FROM_HTML_MODE_LEGACY));
                             }
                         }
                     } catch (IOException | IllegalAccessException e) {
@@ -193,12 +203,11 @@ public class StorageDemoActivity extends AppCompatActivity {
         for (String value : imgMetadata) {
             builder.append(value);
         }
-        String text = "<small>" + builder.toString() + "</small>";
-        return text;
+        return "<small>" + builder.toString() + "</small>";
     }
 
-    private ArrayList<String> nativeGetMetadata(Uri currentUri) throws IOException, IllegalAccessException {
-        ArrayList<String> directories = new ArrayList<String>();
+    private ArrayList<String> nativeGetMetadata(Uri currentUri) throws IOException, IllegalAccessException, NullPointerException {
+        ArrayList<String> directories = new ArrayList<>();
         MediaMetadataRetriever metaRetriever = new MediaMetadataRetriever();
         ParcelFileDescriptor pfd =
                 this.getContentResolver().
@@ -268,7 +277,7 @@ public class StorageDemoActivity extends AppCompatActivity {
         return PDDocumentInformationFormat.format(info);
     }
 
-    private ArrayList<String> getImageAndVideosMetadata(Uri uri) throws IOException {
+    private ArrayList<String> getImageAndVideosMetadata(Uri uri) throws IOException, RuntimeException {
         InputStream inputStream = getContentResolver().openInputStream(uri);
         ArrayList<String> directories = new ArrayList<String>();
         try {
@@ -353,7 +362,7 @@ public class StorageDemoActivity extends AppCompatActivity {
         startActivityForResult(intent, OPEN_REQUEST_CODE);
     }
 
-    public MediaType detectMediaType(Uri uri) throws TikaException, IOException {
+    public MediaType detectMediaType(Uri uri) throws TikaException, IOException, RuntimeException {
         InputStream inputStream =
                 getContentResolver().openInputStream(uri);
         TikaConfig tika = new TikaConfig();
@@ -388,9 +397,7 @@ public class StorageDemoActivity extends AppCompatActivity {
                 extension = ".gz";
             }
 
-        } catch (TikaException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
+        } catch (TikaException | IOException e) {
             e.printStackTrace();
         }
 
@@ -401,16 +408,14 @@ public class StorageDemoActivity extends AppCompatActivity {
     public String getMediaSize(Uri uri) throws FileNotFoundException {
         InputStream inputStream =
                 getContentResolver().openInputStream(uri);
+
         try (final TikaInputStream tis = TikaInputStream.get(inputStream)) {
             size = tis.getLength();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        try {
             inputStream.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
+
         String sizeFormatted = Utils.readableFileSize(size);
         return sizeFormatted;
     }
