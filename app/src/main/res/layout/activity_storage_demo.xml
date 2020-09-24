@@ -75,7 +75,7 @@
 
 
         <EditText
-            android:id="@+id/fileText"
+            android:id="@+id/textEditMeta"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_below="@+id/preview1"
@@ -85,38 +85,38 @@
             android:typeface="monospace" />
 
         <TextView
-            android:id="@+id/preview2"
+            android:id="@+id/textViewASCII"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/fileText"
+            android:layout_below="@+id/textEditMeta"
             android:text="Detailed metadata"
             android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1" />
 
 
         <EditText
-            android:id="@+id/fileText2"
+            android:id="@+id/textEditMetaDeep"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/preview2"
+            android:layout_below="@+id/textViewASCII"
             android:layout_alignParentLeft="true"
             android:inputType="textMultiLine"
             android:scrollbars="vertical"
             android:typeface="monospace" />
 
         <TextView
-            android:id="@+id/preview3"
+            android:id="@+id/hexPreview"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/fileText2"
+            android:layout_below="@+id/textEditMetaDeep"
             android:text="Hex preview"
             android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1" />
 
 
         <EditText
-            android:id="@+id/hex"
+            android:id="@+id/textEditHex"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/preview3"
+            android:layout_below="@+id/hexPreview"
             android:layout_alignParentLeft="true"
             android:inputType="textMultiLine"
             android:scrollbars="vertical"

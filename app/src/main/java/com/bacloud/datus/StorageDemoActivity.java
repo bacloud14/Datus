@@ -57,10 +57,10 @@ public class StorageDemoActivity extends AppCompatActivity {
 
     private static final int OPEN_REQUEST_CODE = 41;
     private static final int SAVE_REQUEST_CODE = 42;
-    private EditText textView;
-    private EditText textView2_1;
-    private TextView textView2_2;
-    private EditText textView3;
+    private EditText textEditMeta;
+    private EditText textEditMetaDeep;
+    private TextView textViewASCII;
+    private EditText textEditHex;
 
     private long size = 0;
 
@@ -71,10 +71,10 @@ public class StorageDemoActivity extends AppCompatActivity {
 
 
         setContentView(R.layout.activity_storage_demo);
-        textView = (EditText) findViewById(R.id.fileText);
-        textView2_1 = (EditText) findViewById(R.id.fileText2);
-        textView2_2 = (TextView) findViewById(R.id.preview2);
-        textView3 = (EditText) findViewById(R.id.hex);
+        textEditMeta = (EditText) findViewById(R.id.textEditMeta);
+        textEditMetaDeep = (EditText) findViewById(R.id.textEditMetaDeep);
+        textViewASCII = (TextView) findViewById(R.id.textViewASCII);
+        textEditHex = (EditText) findViewById(R.id.textEditHex);
 
     }
 
@@ -87,123 +87,125 @@ public class StorageDemoActivity extends AppCompatActivity {
         String output = "";
         String alias;
         MediaTypeRegistry registry = MediaTypeRegistry.getDefaultRegistry();
-        if (resultCode == Activity.RESULT_OK) {
+        if (resultCode != Activity.RESULT_OK || requestCode != OPEN_REQUEST_CODE || resultData == null) {
+            Toast.makeText(getBaseContext(), "success",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
 
-            if (requestCode == SAVE_REQUEST_CODE) {
-//                if (resultData != null) {
-//                    currentUri = resultData.getData();
-//                    writeFileContent(currentUri);
-//                }
-            } else if (requestCode == OPEN_REQUEST_CODE) {
+        boolean error;
 
-                if (resultData != null) {
-                    currentUri = resultData.getData();
+        currentUri = resultData.getData();
+        try {
+            String language = "Not a plain text or not identified";
+            String type;
+            String extension = "";
+            String size;
+            MediaType mimeType = null;
+            // FILE EXTENSION DETECTION :: Tika client code for
+            // FILE EXTENSION DETECTION :: Tika client code for
+            // FILE EXTENSION DETECTION :: Tika client code for
+            try {
+                mimeType = detectMediaType(currentUri);
+                type = mimeType.getType();
+                content = readFileContent(currentUri, mimeType.getType().equals("text"));
+                if (mimeType.getType().equals("text") && mimeType.getSubtype().equals("plain"))
+                    language = detectLang(content);
+                size = getMediaSize(currentUri);
+                String[] native_tags = dumpImageMetaData(this, currentUri);
+                Set<MediaType> aliases = registry.getAliases(mimeType);
+                alias = aliases.isEmpty() ? "" : String.format("<br><font color='#008577'>%s is known as %s</font>", mimeType, aliases);
+                extension = detectExtension(mimeType);
+                output = s(String.format(
+                        "Name: %s " +
+                                "<br><font color='#1ABC9C'>Type: %s</font>%s" +
+                                "<br>Language: %s" +
+                                "<br>Extension: %s" +
+                                "<br>Size: %s"
+                        , native_tags[0], type, alias, language, extension, size));
+                error = false;
+            } catch (TikaException | IllegalAccessException | InstantiationException | RuntimeException e) {
+                error = true;
+                Toast.makeText(getBaseContext(), "failed",
+                        Toast.LENGTH_LONG).show();
+                output = s("<font color='#C0392B'>ERROR: Datus is having hard time reading this media file. \n " +
+                        "It is probably because the file has not been released by another application from a pending state</font>");
+                e.printStackTrace();
+            }
 
-                    try {
-                        String language = "not a plain text or not identified";
-                        String type;
-                        String extension = "";
-                        String size;
-                        MediaType mimeType = null;
-                        // FILE EXTENSION DETECTION :: Tika client code for
-                        // FILE EXTENSION DETECTION :: Tika client code for
-                        // FILE EXTENSION DETECTION :: Tika client code for
-                        try {
-                            mimeType = detectMediaType(currentUri);
-                            type = mimeType.getType() == null ? "type not identified" : mimeType.getType();
-                            if (mimeType.getType().equals("text"))
-                                content = readFileContent(currentUri, true);
-                            else
-                                content = readFileContent(currentUri, false);
+            HTML(textEditMeta, output);
+            // METADATA DETECTION
+            // METADATA DETECTION
+            // METADATA DETECTION
+            // PDF and IMAGE metadata detection
+            // PdfBox-Android and com.drewnoakes metadata-extractor
+            ArrayList<String> mediaMetadata = new ArrayList<>();
+            ArrayList<String> pdfMetadata = new ArrayList<>();
+            ArrayList<String> nativeMetadata = new ArrayList<>();
+            try {
+                mediaMetadata = getImageAndVideosMetadata(currentUri);
+            } catch (RuntimeException e) {
+                error = true;
+                e.printStackTrace();
+            }
+            try {
+                if (extension.equals(".pdf"))
+                    pdfMetadata = getPdfMetadata(currentUri);
+            } catch (RuntimeException e) {
+                error = true;
+                e.printStackTrace();
+            }
 
-                            if (mimeType.getType().equals("text") && mimeType.getSubtype().equals("plain")) {
-                                language = detectLang(content);
-                            }
-                            size = getMediaSize(currentUri);
-                            String[] native_tags = dumpImageMetaData(this, currentUri);
-                            Set<MediaType> aliases = registry.getAliases(mimeType);
-                            alias = aliases.isEmpty() ? "" : "<br><font color='#008577'>" + mimeType + " is known as " + aliases + "</font>";
-                            extension = detectExtension(mimeType);
 
-                            output = "<small>Name: " + native_tags[0] +
-                                    "<br><font color='#1ABC9C'>Type: " + type + "</font>" +
-                                    alias +
-                                    "<br>Language: " + language +
-                                    "<br>Extension: " + extension +
-                                    "<br>Size: " + size + "</small>";
+            mediaMetadata.addAll(pdfMetadata);
+            if (!mediaMetadata.isEmpty() || !pdfMetadata.isEmpty()) {
+                String text = stringBuilderFormatted(mediaMetadata);
+                HTML(textEditMetaDeep, text);
+            } else {
+                // NATIVE MEDIA METADATA DETECTION
+                // NATIVE MEDIA METADATA DETECTION
+                // NATIVE MEDIA METADATA DETECTION
 
-                        } catch (TikaException | IllegalAccessException | InstantiationException | RuntimeException e) {
-                            Toast.makeText(getBaseContext(), "failed",
-                                    Toast.LENGTH_LONG).show();
+                if (mimeType != null && (mimeType.getType().equals("audio") ||
+                        mimeType.getType().equals("image") ||
+                        mimeType.getType().equals("video")))
+                    nativeMetadata = nativeGetMetadata(currentUri);
 
-                            output = "<small><font color='#C0392B'>ERROR: Datus is having hard time reading this media file. \n " +
-                                    "It is probably because the file has not been released by another application from a pending state.</font></small>";
-                            e.printStackTrace();
-                        }
-
-                        textView.setText(HtmlCompat.fromHtml(output, HtmlCompat.FROM_HTML_MODE_LEGACY));
-
-                        // METADATA DETECTION
-                        // METADATA DETECTION
-                        // METADATA DETECTION
-                        // PDF and IMAGE metadata detection
-                        // PdfBox-Android and com.drewnoakes metadata-extractor
-                        ArrayList<String> mediaMetadata = new ArrayList<>();
-                        try {
-                            mediaMetadata = getImageAndVideosMetadata(currentUri);
-                        } catch (RuntimeException e) {
-                            e.printStackTrace();
-                        }
-                        ArrayList<String> pdfMetadata = new ArrayList<>();
-                        if (extension.equals(".pdf"))
-                            pdfMetadata = getPdfMetadata(currentUri);
-
-                        mediaMetadata.addAll(pdfMetadata);
-                        if (!mediaMetadata.isEmpty() || !pdfMetadata.isEmpty()) {
-                            String text = stringBuilderFormatted(mediaMetadata);
-                            textView2_1.setText(HtmlCompat.fromHtml(text, HtmlCompat.FROM_HTML_MODE_LEGACY));
-                        } else {
-                            // NATIVE MEDIA METADATA DETECTION
-                            // NATIVE MEDIA METADATA DETECTION
-                            // NATIVE MEDIA METADATA DETECTION
-                            ArrayList<String> nativeMetadata = new ArrayList<>();
-                            if (mimeType != null && (mimeType.getType().equals("audio") ||
-                                    mimeType.getType().equals("image") ||
-                                    mimeType.getType().equals("video")))
-                                nativeMetadata = nativeGetMetadata(currentUri);
-
-                            if (!nativeMetadata.isEmpty()) {
-                                String text = stringBuilderFormatted(nativeMetadata);
-                                textView2_1.setText(HtmlCompat.fromHtml(text, HtmlCompat.FROM_HTML_MODE_LEGACY));
-                            } else {
-                                // RAW CONTENT OUTPUT
-                                // RAW CONTENT OUTPUT
-                                // RAW CONTENT OUTPUT
-                                textView2_2.setText("ASCII preview of first bytes");
-                                if (content.length() >= 200)
-                                    textView2_1.setText(HtmlCompat.fromHtml("<small>" + content.substring(0, 200) + "</small>", HtmlCompat.FROM_HTML_MODE_LEGACY));
-                                else
-                                    textView2_1.setText(HtmlCompat.fromHtml("<small>" + content + "</small>", HtmlCompat.FROM_HTML_MODE_LEGACY));
-                            }
-                        }
-                    } catch (IOException | IllegalAccessException e) {
-                        // Handle error here
-                        e.printStackTrace();
-                    }
+                if (!nativeMetadata.isEmpty()) {
+                    output = stringBuilderFormatted(nativeMetadata);
+                    HTML(textEditMetaDeep, output);
+                } else {
+                    // RAW CONTENT OUTPUT
+                    // RAW CONTENT OUTPUT
+                    // RAW CONTENT OUTPUT
+                    textViewASCII.setText("ASCII preview of first bytes");
+                    if (content.length() >= 200)
+                        HTML(textEditMetaDeep, s(content.substring(0, 200)));
+                    else
+                        HTML(textEditMetaDeep, s(content));
                 }
             }
+        } catch (IOException | IllegalAccessException e) {
+            // Handle error here
+            error = true;
+            e.printStackTrace();
         }
-        Toast.makeText(getBaseContext(), "success",
-                Toast.LENGTH_LONG).show();
+        if (!error)
+            Toast.makeText(getBaseContext(), "success",
+                    Toast.LENGTH_LONG).show();
 
     }
 
-    private String stringBuilderFormatted(ArrayList<String> imgMetadata) {
+    private void HTML(EditText textView, String text) {
+        textView.setText(HtmlCompat.fromHtml(text, HtmlCompat.FROM_HTML_MODE_LEGACY));
+    }
+
+    private String stringBuilderFormatted(ArrayList<String> metadata) {
         StringBuilder builder = new StringBuilder();
-        for (String value : imgMetadata) {
+        for (String value : metadata) {
             builder.append(value);
         }
-        return "<small>" + builder.toString() + "</small>";
+        return s(builder.toString());
     }
 
     private ArrayList<String> nativeGetMetadata(Uri currentUri) throws IOException, IllegalAccessException, NullPointerException {
@@ -301,7 +303,7 @@ public class StorageDemoActivity extends AppCompatActivity {
 
     }
 
-    // Read limit content parsing to some extent not to be so heavy
+    // READ LIMIT CONTENT PARSING TO SOME EXTENT NOT TO BE SO HEAVY
     private String readFileContent(Uri uri, boolean textual) throws IOException, InstantiationException, IllegalAccessException {
 
         InputStream inputStream = getContentResolver().openInputStream(uri);
@@ -322,8 +324,8 @@ public class StorageDemoActivity extends AppCompatActivity {
             byte fileContent[] = new byte[200];
             inputStream.read(fileContent, 0, 200);
             String s = new String(fileContent);
-            String hexCode = "<small>" + Utils.hex(fileContent) + "</small>";
-            textView3.setText(Html.fromHtml(hexCode));
+            String hexCode = s(Utils.hex(fileContent));
+            textEditHex.setText(Html.fromHtml(hexCode));
             inputStream.close();
             return s;
         }
@@ -331,30 +333,6 @@ public class StorageDemoActivity extends AppCompatActivity {
 
     }
 
-    /*
-        private void writeFileContent(Uri uri) {
-            try {
-                ParcelFileDescriptor pfd =
-                        this.getContentResolver().
-                                openFileDescriptor(uri, "w");
-
-                FileOutputStream fileOutputStream =
-                        new FileOutputStream(pfd.getFileDescriptor());
-
-                String textContent =
-                        textView.getText().toString();
-
-                fileOutputStream.write(textContent.getBytes());
-
-                fileOutputStream.close();
-                pfd.close();
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    */
     public void openFile(View view) {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -477,6 +455,10 @@ public class StorageDemoActivity extends AppCompatActivity {
                 Toast.LENGTH_LONG).show();
     }
 
+    // TAG SMALL FOR HTML OUTPUT
+    public String s(String s) {
+        return "<small>" + s + "</small>";
+    }
 
 }
 
