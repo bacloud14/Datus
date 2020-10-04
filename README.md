@@ -20,4 +20,6 @@ If you contribute, please consider that I can merge and publish a new release un
 
 If you want to maintain the project with me, you can alwayse ask.
 
+Please keep it fair if you want to deploy anywhere, ask for permission.
+
 Sweet coding !
