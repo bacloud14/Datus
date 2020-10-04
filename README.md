@@ -10,6 +10,13 @@ Tika solution and metadata-extractor were successfully used as back-end in this 
 
 It does not connect to any server; So it is 100% offline.
 
+UI:
+
+![Datus](Screenshot4.jpg)
+![Datus](Screenshot5.jpg)
+![Datus](Screenshot6.jpg)
+![Datus](Screenshot7.jpg)
+
 # Contribution
 
 Please see open issues for a specific issue, and do not hesitate to open any new issue (like better code, readability, modularity and best practice, performance, better UI or even functionality enhancements...).
