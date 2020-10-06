@@ -21,6 +21,9 @@ UI:
 
 Please see open issues for a specific issue, and do not hesitate to open any new issue (like better code, readability, modularity and best practice, performance, better UI or even functionality enhancements...).
 
+Current priority: 
+https://github.com/bacloud14/Datus/issues/1#issue-714240385
+
 Please know that I am not a keen Android developer, but I successfully made this tiny Android app available on Play Store here https://play.google.com/store/apps/details?id=com.bacloud.datus
 
 If you contribute, please consider that I can merge and publish a new release under that channel, It will be 100% free for Android users on Play store and anywhere, although I can add ads to generate some coffee expenses :)
