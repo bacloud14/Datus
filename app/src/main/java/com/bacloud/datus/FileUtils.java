@@ -16,6 +16,8 @@ import android.provider.MediaStore;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
 
+import com.drew.lang.StringUtil;
+
 import java.io.File;
 import java.io.FileFilter;
 import java.text.DecimalFormat;
@@ -44,39 +46,30 @@ public class FileUtils {
      *
      * @author paulburke
      */
-    public static Comparator<File> sComparator = new Comparator<File>() {
-        @Override
-        public int compare(File f1, File f2) {
-            // Sort alphabetically by lower case, which is much cleaner
-            return f1.getName().toLowerCase().compareTo(
-                    f2.getName().toLowerCase());
-        }
+    public static Comparator<File> sComparator = (f1, f2) -> {
+        // Sort alphabetically by lower case, which is much cleaner
+        return f1.getName().toLowerCase().compareTo(
+                f2.getName().toLowerCase());
     };
     /**
      * File (not directories) filter.
      *
      * @author paulburke
      */
-    public static FileFilter sFileFilter = new FileFilter() {
-        @Override
-        public boolean accept(File file) {
-            final String fileName = file.getName();
-            // Return files only (not directories) and skip hidden files
-            return file.isFile() && !fileName.startsWith(HIDDEN_PREFIX);
-        }
+    public static FileFilter sFileFilter = file -> {
+        final String fileName = file.getName();
+        // Return files only (not directories) and skip hidden files
+        return file.isFile() && !fileName.startsWith(HIDDEN_PREFIX);
     };
     /**
      * Folder (directories) filter.
      *
      * @author paulburke
      */
-    public static FileFilter sDirFilter = new FileFilter() {
-        @Override
-        public boolean accept(File file) {
-            final String fileName = file.getName();
-            // Return directories only and skip hidden directories
-            return file.isDirectory() && !fileName.startsWith(HIDDEN_PREFIX);
-        }
+    public static FileFilter sDirFilter = file -> {
+        final String fileName = file.getName();
+        // Return directories only and skip hidden directories
+        return file.isDirectory() && !fileName.startsWith(HIDDEN_PREFIX);
     };
 
     private FileUtils() {
@@ -85,7 +78,7 @@ public class FileUtils {
     /**
      * Gets the extension of a file name, like ".png" or ".jpg".
      *
-     * @param uri
+     * @param uri - file path
      * @return Extension including the dot("."); "" if there is no extension;
      * null if uri was null.
      */
@@ -107,10 +100,7 @@ public class FileUtils {
      * @return Whether the URI is a local one.
      */
     public static boolean isLocal(String url) {
-        if (url != null && !url.startsWith("http://") && !url.startsWith("https://")) {
-            return true;
-        }
-        return false;
+        return url != null && !url.startsWith("http://") && !url.startsWith("https://");
     }
 
     /**
@@ -124,7 +114,7 @@ public class FileUtils {
     /**
      * Convert File into Uri.
      *
-     * @param file
+     * @param file a File object
      * @return uri
      */
     public static Uri getUri(File file) {
@@ -137,8 +127,8 @@ public class FileUtils {
     /**
      * Returns the path only (without file name).
      *
-     * @param file
-     * @return
+     * @param file a File object
+     * @return path to file without it's name
      */
     public static File getPathWithoutFilename(File file) {
         if (file != null) {
@@ -150,12 +140,12 @@ public class FileUtils {
                 String filepath = file.getAbsolutePath();
 
                 // Construct path without file name.
-                String pathwithoutname = filepath.substring(0,
+                String pathWithoutName = filepath.substring(0,
                         filepath.length() - filename.length());
-                if (pathwithoutname.endsWith("/")) {
-                    pathwithoutname = pathwithoutname.substring(0, pathwithoutname.length() - 1);
+                if (pathWithoutName.endsWith("/")) {
+                    pathWithoutName = pathWithoutName.substring(0, pathWithoutName.length() - 1);
                 }
-                return new File(pathwithoutname);
+                return new File(pathWithoutName);
             }
         }
         return null;
@@ -178,13 +168,19 @@ public class FileUtils {
      * @return The MIME type for the give Uri.
      */
     public static String getMimeType(Context context, Uri uri) {
-        File file = new File(getPath(context, uri));
-        return getMimeType(file);
+        String path = getPath(context, uri);
+        if (path != null) {
+            File file = new File(path);
+            return getMimeType(file);
+        }
+        return "";
     }
 
     public static boolean isLocalStorageDocument(Uri uri) {
-
-        return uri.getAuthority().equals(AUTHORITY);
+        if (uri.getAuthority() != null) {
+            return uri.getAuthority().equals(AUTHORITY);
+        }
+        return false;
 //        return LocalStorageProvider.AUTHORITY.equals(uri.getAuthority());
     }
 
@@ -287,10 +283,8 @@ public class FileUtils {
                             ", Segments: " + uri.getPathSegments().toString()
             );
 
-        final boolean isKitKat = Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT;
-
         // DocumentProvider
-        if (isKitKat && DocumentsContract.isDocumentUri(context, uri)) {
+        if (DocumentsContract.isDocumentUri(context, uri)) {
             // LocalStorageProvider
             if (isLocalStorageDocument(uri)) {
                 // The path is the id
@@ -313,7 +307,7 @@ public class FileUtils {
 
                 final String id = DocumentsContract.getDocumentId(uri);
                 final Uri contentUri = ContentUris.withAppendedId(
-                        Uri.parse("content://downloads/public_downloads"), Long.valueOf(id));
+                        Uri.parse("content://downloads/public_downloads"), Long.parseLong(id));
 
                 return getDataColumn(context, contentUri, null, null);
             }
@@ -368,7 +362,7 @@ public class FileUtils {
     public static File getFile(Context context, Uri uri) {
         if (uri != null) {
             String path = getPath(context, uri);
-            if (path != null && isLocal(path)) {
+            if (isLocal(path)) {
                 return new File(path);
             }
         }
@@ -378,8 +372,8 @@ public class FileUtils {
     /**
      * Get the file size in a human-readable string.
      *
-     * @param size
-     * @return
+     * @param size actual size of file
+     * @return formatted size of file
      * @author paulburke
      */
     public static String getReadableFileSize(int size) {
@@ -403,16 +397,16 @@ public class FileUtils {
                 }
             }
         }
-        return String.valueOf(dec.format(fileSize) + suffix);
+        return dec.format(fileSize) + suffix;
     }
 
     /**
      * Attempt to retrieve the thumbnail of given File from the MediaStore. This
      * should not be called on the UI thread.
      *
-     * @param context
-     * @param file
-     * @return
+     * @param context Context object
+     * @param file    File object
+     * @return a Bitmap instance which represents a thumbnail of a given file
      * @author paulburke
      */
     public static Bitmap getThumbnail(Context context, File file) {
@@ -423,9 +417,9 @@ public class FileUtils {
      * Attempt to retrieve the thumbnail of given Uri from the MediaStore. This
      * should not be called on the UI thread.
      *
-     * @param context
-     * @param uri
-     * @return
+     * @param context Context object
+     * @param uri     Uri object
+     * @return Bitmap instance which represents a thumbnail by a given uri
      * @author paulburke
      */
     public static Bitmap getThumbnail(Context context, Uri uri) {
@@ -436,10 +430,10 @@ public class FileUtils {
      * Attempt to retrieve the thumbnail of given Uri from the MediaStore. This
      * should not be called on the UI thread.
      *
-     * @param context
-     * @param uri
-     * @param mimeType
-     * @return
+     * @param context  Context object
+     * @param uri      Uri object
+     * @param mimeType String object
+     * @return thumbnail of given Uri from the MediaStore
      * @author paulburke
      */
     public static Bitmap getThumbnail(Context context, Uri uri, String mimeType) {
@@ -452,37 +446,30 @@ public class FileUtils {
         }
 
         Bitmap bm = null;
-        if (uri != null) {
-            final ContentResolver resolver = context.getContentResolver();
-            Cursor cursor = null;
-            try {
-                cursor = resolver.query(uri, null, null, null, null);
-                if (cursor.moveToFirst()) {
-                    final int id = cursor.getInt(0);
-                    if (DEBUG)
-                        Log.d(TAG, "Got thumb ID: " + id);
-
-                    if (mimeType.contains("video")) {
-                        bm = MediaStore.Video.Thumbnails.getThumbnail(
-                                resolver,
-                                id,
-                                MediaStore.Video.Thumbnails.MINI_KIND,
-                                null);
-                    } else if (mimeType.contains(FileUtils.MIME_TYPE_IMAGE)) {
-                        bm = MediaStore.Images.Thumbnails.getThumbnail(
-                                resolver,
-                                id,
-                                MediaStore.Images.Thumbnails.MINI_KIND,
-                                null);
-                    }
-                }
-            } catch (Exception e) {
+        final ContentResolver resolver = context.getContentResolver();
+        try (Cursor cursor = resolver.query(uri, null, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                final int id = cursor.getInt(0);
                 if (DEBUG)
-                    Log.e(TAG, "getThumbnail", e);
-            } finally {
-                if (cursor != null)
-                    cursor.close();
+                    Log.d(TAG, "Got thumb ID: " + id);
+
+                if (mimeType.contains("video")) {
+                    bm = MediaStore.Video.Thumbnails.getThumbnail(
+                            resolver,
+                            id,
+                            MediaStore.Video.Thumbnails.MINI_KIND,
+                            null);
+                } else if (mimeType.contains(FileUtils.MIME_TYPE_IMAGE)) {
+                    bm = MediaStore.Images.Thumbnails.getThumbnail(
+                            resolver,
+                            id,
+                            MediaStore.Images.Thumbnails.MINI_KIND,
+                            null);
+                }
             }
+        } catch (Exception e) {
+            if (DEBUG)
+                Log.e(TAG, "getThumbnail", e);
         }
         return bm;
     }

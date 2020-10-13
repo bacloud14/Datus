@@ -25,17 +25,12 @@ import java.io.OutputStream;
 import java.text.DecimalFormat;
 
 public class Utils {
+
     /* Get uri related content real local file path. */
     public static String getPath(Context ctx, Uri uri) {
         String ret;
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                // Android OS above sdk version 19.
-                ret = getUriRealPathAboveKitkat(ctx, uri);
-            } else {
-                // Android OS below sdk version 19
-                ret = getRealPath(ctx.getContentResolver(), uri, null);
-            }
+            ret = getUriRealPathAboveKitkat(ctx, uri);
         } catch (Exception e) {
             e.printStackTrace();
             Log.d("DREG", "FilePath Catch: " + e);
@@ -62,9 +57,11 @@ public class Utils {
         if (uri == null) return null;
         String fileName = null;
         String path = uri.getPath();
-        int cut = path.lastIndexOf('/');
-        if (cut != -1) {
-            fileName = path.substring(cut + 1);
+        if (path != null) {
+            int cut = path.lastIndexOf('/');
+            if (cut != -1) {
+                fileName = path.substring(cut + 1);
+            }
         }
         return fileName;
     }
@@ -105,7 +102,7 @@ public class Utils {
                 String uriAuthority = uri.getAuthority();
 
                 if (isMediaDoc(uriAuthority)) {
-                    String idArr[] = documentId.split(":");
+                    String[] idArr = documentId.split(":");
                     if (idArr.length == 2) {
                         // First item is document type.
                         String docType = idArr[0];
@@ -134,12 +131,12 @@ public class Utils {
                     Uri downloadUri = Uri.parse("content://downloads/public_downloads");
 
                     // Append download document id at uri end.
-                    Uri downloadUriAppendId = ContentUris.withAppendedId(downloadUri, Long.valueOf(documentId));
+                    Uri downloadUriAppendId = ContentUris.withAppendedId(downloadUri, Long.parseLong(documentId));
 
                     ret = getRealPath(ctx.getContentResolver(), downloadUriAppendId, null);
 
                 } else if (isExternalStoreDoc(uriAuthority)) {
-                    String idArr[] = documentId.split(":");
+                    String[] idArr = documentId.split(":");
                     if (idArr.length == 2) {
                         String type = idArr[0];
                         String realDocId = idArr[1];

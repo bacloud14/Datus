@@ -49,6 +49,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
@@ -68,7 +69,6 @@ public class StorageDemoActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
 
         setContentView(R.layout.activity_storage_demo);
         textEditMeta = (EditText) findViewById(R.id.textEditMeta);
@@ -178,7 +178,7 @@ public class StorageDemoActivity extends AppCompatActivity {
                     // RAW CONTENT OUTPUT
                     // RAW CONTENT OUTPUT
                     // RAW CONTENT OUTPUT
-                    textViewASCII.setText("ASCII preview of first bytes");
+                    textViewASCII.setText(R.string.ascii_preview);
                     if (content.length() >= 200)
                         HTML(textEditMetaDeep, s(content.substring(0, 200)));
                     else
@@ -211,22 +211,24 @@ public class StorageDemoActivity extends AppCompatActivity {
     private ArrayList<String> nativeGetMetadata(Uri currentUri) throws IOException, IllegalAccessException, NullPointerException {
         ArrayList<String> directories = new ArrayList<>();
         MediaMetadataRetriever metaRetriever = new MediaMetadataRetriever();
-        ParcelFileDescriptor pfd =
-                this.getContentResolver().
-                        openFileDescriptor(currentUri, "r");
+        ParcelFileDescriptor pfd = this
+                .getContentResolver()
+                .openFileDescriptor(currentUri, "r");
 
-        metaRetriever.setDataSource(pfd.getFileDescriptor());
-        for (Field f : MediaMetadataRetriever.class.getFields()) {
-            f.setAccessible(true);
-            Object value = f.get(metaRetriever);
-            Object o = metaRetriever.extractMetadata((Integer) value);
-            if (o != null) {
-                directories.add(String.format("<font color='#3498DB'>%s= </font> %s<br>",
-                        f.getName(), o));
+        if (pfd != null) {
+            metaRetriever.setDataSource(pfd.getFileDescriptor());
+            for (Field f : MediaMetadataRetriever.class.getFields()) {
+                f.setAccessible(true);
+                Object value = f.get(metaRetriever);
+                Object o = metaRetriever.extractMetadata((Integer) value);
+                if (o != null) {
+                    directories.add(String.format("<font color='#3498DB'>%s= </font> %s<br>",
+                            f.getName(), o));
+                }
             }
+            metaRetriever.close();
+            pfd.close();
         }
-        metaRetriever.close();
-        pfd.close();
         return directories;
     }
 
@@ -236,9 +238,8 @@ public class StorageDemoActivity extends AppCompatActivity {
         // The query, since it only applies to a single document, will only return
         // one row. There's no need to filter, sort, or select fields, since we want
         // all fields for one document.
-        Cursor cursor = context.getContentResolver().query(uri, null, null, null, null);
 
-        try {
+        try (Cursor cursor = context.getContentResolver().query(uri, null, null, null, null)) {
             // moveToFirst() returns false if the cursor has 0 rows.  Very handy for
             // "if there's anything to look at, look at it" conditionals.
             if (cursor != null && cursor.moveToFirst()) {
@@ -263,8 +264,6 @@ public class StorageDemoActivity extends AppCompatActivity {
                     size = "Unknown";
                 }
             }
-        } finally {
-            cursor.close();
         }
         return new String[]{displayName, size};
     }
@@ -273,18 +272,23 @@ public class StorageDemoActivity extends AppCompatActivity {
     private ArrayList<String> getPdfMetadata(Uri uri) throws IOException {
         InputStream inputStream = getContentResolver().openInputStream(uri);
         PDFBoxResourceLoader.init(getApplicationContext());
-        PDDocument pdf = PDDocument.load(inputStream);
-        PDDocumentInformation info = pdf.getDocumentInformation();
-        inputStream.close();
+        PDDocumentInformation info = new PDDocumentInformation();
+        if (inputStream != null) {
+            PDDocument pdf = PDDocument.load(inputStream);
+            info = pdf.getDocumentInformation();
+            inputStream.close();
+        }
         return PDDocumentInformationFormat.format(info);
     }
 
     private ArrayList<String> getImageAndVideosMetadata(Uri uri) throws IOException, RuntimeException {
         InputStream inputStream = getContentResolver().openInputStream(uri);
-        ArrayList<String> directories = new ArrayList<String>();
+        ArrayList<String> directories = new ArrayList<>();
         try {
             com.drew.metadata.Metadata metadata2 = ImageMetadataReader.readMetadata(inputStream);
-            inputStream.close();
+            if (inputStream != null) {
+                inputStream.close();
+            }
             for (Directory directory : metadata2.getDirectories()) {
                 for (Tag tag : directory.getTags()) {
                     directories.add(String.format("<font color='#3498DB'>%s - %s= </font> %s<br>",
@@ -307,30 +311,31 @@ public class StorageDemoActivity extends AppCompatActivity {
     private String readFileContent(Uri uri, boolean textual) throws IOException, InstantiationException, IllegalAccessException {
 
         InputStream inputStream = getContentResolver().openInputStream(uri);
-        if (textual) {
-            BufferedReader reader =
-                    new BufferedReader(new InputStreamReader(
-                            inputStream));
-            StringBuilder stringBuilder = new StringBuilder();
-            String currentline;
-            int co = 0;
-            while (co < 10 && (currentline = reader.readLine()) != null) {
-                stringBuilder.append(currentline + "\n");
-                co++;
+        if (inputStream != null) {
+            if (textual) {
+                BufferedReader reader =
+                        new BufferedReader(new InputStreamReader(
+                                inputStream));
+                StringBuilder stringBuilder = new StringBuilder();
+                String currentLine;
+                int co = 0;
+                while (co < 10 && (currentLine = reader.readLine()) != null) {
+                    stringBuilder.append(currentLine).append("\n");
+                    co++;
+                }
+                inputStream.close();
+                return stringBuilder.toString();
+            } else {
+                byte[] fileContent = new byte[200];
+                inputStream.read(fileContent, 0, 200);
+                String s = new String(fileContent);
+                String hexCode = s(Utils.hex(fileContent));
+                textEditHex.setText(Html.fromHtml(hexCode));
+                inputStream.close();
+                return s;
             }
-            inputStream.close();
-            return stringBuilder.toString();
-        } else {
-            byte fileContent[] = new byte[200];
-            inputStream.read(fileContent, 0, 200);
-            String s = new String(fileContent);
-            String hexCode = s(Utils.hex(fileContent));
-            textEditHex.setText(Html.fromHtml(hexCode));
-            inputStream.close();
-            return s;
         }
-
-
+        return "";
     }
 
     public void openFile(View view) {
@@ -345,17 +350,19 @@ public class StorageDemoActivity extends AppCompatActivity {
                 getContentResolver().openInputStream(uri);
         TikaConfig tika = new TikaConfig();
 
-        MediaType mimetype = tika.getDetector().detect(
-                TikaInputStream.get(inputStream), new Metadata());
-        inputStream.close();
+        MediaType mimetype = null;
+        if (inputStream != null) {
+            mimetype = tika.getDetector().detect(
+                    TikaInputStream.get(inputStream), new Metadata());
+            inputStream.close();
+        }
 
         return mimetype;
     }
 
     public String detectLang(String content) {
         LanguageIdentifier identifier = new LanguageIdentifier(content);
-        String language = identifier.getLanguage();
-        return language;
+        return identifier.getLanguage();
     }
 
     public String detectExtension(MediaType mediatype) {
@@ -394,8 +401,7 @@ public class StorageDemoActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        String sizeFormatted = Utils.readableFileSize(size);
-        return sizeFormatted;
+        return Utils.readableFileSize(size);
     }
 
     public void thanks(View view) {
@@ -404,9 +410,9 @@ public class StorageDemoActivity extends AppCompatActivity {
         try {
             AssetManager am = getApplicationContext().getAssets();
             InputStream is = am.open(to);
-            InputStreamReader inputStreamReader = new InputStreamReader(is, "UTF-8");
+            InputStreamReader inputStreamReader = new InputStreamReader(is, StandardCharsets.UTF_8);
             BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-            String receiveString = "";
+            String receiveString;
             StringBuilder stringBuilder = new StringBuilder();
 
             while ((receiveString = bufferedReader.readLine()) != null) {
@@ -426,32 +432,28 @@ public class StorageDemoActivity extends AppCompatActivity {
     }
 
     private void createDialog(String message) {
-        Dialog custoDialog = new Dialog(StorageDemoActivity.this);
-        custoDialog.setContentView(R.layout.licence_layout);
+        Dialog customDialog = new Dialog(StorageDemoActivity.this);
+        customDialog.setContentView(R.layout.licence_layout);
 
-        Window window = custoDialog.getWindow();
-        window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
-        window.setGravity(Gravity.CENTER);
+        Window window = customDialog.getWindow();
+        if (window != null) {
+            window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
+            window.setGravity(Gravity.CENTER);
+        }
 
-
-        TextView tv = custoDialog.findViewById(R.id.tv);
+        TextView tv = customDialog.findViewById(R.id.tv);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             tv.setJustificationMode(Layout.JUSTIFICATION_MODE_INTER_WORD);
         }
         tv.setText(message);
-        tv.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-            }
-        });
-        custoDialog.show();
+        customDialog.show();
     }
 
     public void showLicences(View view) {
         startActivity(new Intent(this, OssLicensesMenuActivity.class));
         OssLicensesMenuActivity.setActivityTitle(getString(R.string.thanks));
 
-        Toast.makeText(getBaseContext(), "Special thanks to Apache Tika, drewnoaks's metadata-extractor and TomRoush's PdfBox-Android ",
+        Toast.makeText(getBaseContext(), R.string.special_thanks,
                 Toast.LENGTH_LONG).show();
     }
 

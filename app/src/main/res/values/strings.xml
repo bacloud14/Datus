@@ -6,4 +6,6 @@
     <string name="thanks">Special thanks to:</string>
     <string name="tika">Apache Tika</string>
     <string name="drewnoakes">Drewnoakes metadata-extractor</string>
+    <string name="ascii_preview">ASCII preview of first bytes</string>
+    <string name="special_thanks">\"Special thanks to Apache Tika, drewnoaks\'s metadata-extractor and TomRoush\'s PdfBox-Android \"</string>
 </resources>
