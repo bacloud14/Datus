@@ -6,14 +6,14 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.GregorianCalendar;
+import java.util.Locale;
 
 public class PDDocumentInformationFormat {
-    public static String formatDate(GregorianCalendar calendar) {
-        SimpleDateFormat fmt = new SimpleDateFormat("dd-MMM-yyyy");
-        fmt.setCalendar(calendar);
-        String dateFormatted = fmt.format(calendar.getTime());
 
-        return dateFormatted;
+    public static String formatDate(GregorianCalendar calendar) {
+        SimpleDateFormat fmt = new SimpleDateFormat("dd-MMM-yyyy", Locale.getDefault());
+        fmt.setCalendar(calendar);
+        return fmt.format(calendar.getTime());
     }
 
     public static ArrayList<String> format(PDDocumentInformation info) {
@@ -27,8 +27,6 @@ public class PDDocumentInformationFormat {
         String modificationDate = info.getModificationDate() == null ? "" : ("<font color='#3498DB'>Modification Date= </font>" + formatDate((GregorianCalendar) info.getModificationDate()) + "<br>");
         String trapped = info.getTrapped() == null ? "" : ("<font color='#3498DB'>Trapped= </font>" + info.getTrapped() + "><br>");
         String[] metadata_ = {title, author, subject, keywords, creator, producer, creationDate, modificationDate, trapped};
-        ArrayList<String> metadata = new ArrayList<String>();
-        metadata.addAll(Arrays.asList(metadata_));
-        return metadata;
+        return new ArrayList<>(Arrays.asList(metadata_));
     }
 }
