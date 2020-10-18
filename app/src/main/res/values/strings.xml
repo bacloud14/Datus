@@ -8,4 +8,9 @@
     <string name="drewnoakes">Drewnoakes metadata-extractor</string>
     <string name="ascii_preview">ASCII preview of first bytes</string>
     <string name="special_thanks">\"Special thanks to Apache Tika, drewnoaks\'s metadata-extractor and TomRoush\'s PdfBox-Android \"</string>
+    <string name="error_reading_file"><![CDATA[<font color=\'#C0392B\'>ERROR: Datus is having hard time reading this media file. \n It is probably because the file has not been released by another application from a pending state</font>]]></string>
+    <string name="not_plain_text">Not a plain text or not identified</string>
+    <string name="file_metadata">File metadata</string>
+    <string name="detailed_metadata">Detailed metadata</string>
+    <string name="hex_preview">Hex preview</string>
 </resources>

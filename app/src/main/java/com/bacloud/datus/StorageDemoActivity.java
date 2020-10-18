@@ -71,10 +71,10 @@ public class StorageDemoActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_storage_demo);
-        textEditMeta = (EditText) findViewById(R.id.textEditMeta);
-        textEditMetaDeep = (EditText) findViewById(R.id.textEditMetaDeep);
-        textViewASCII = (TextView) findViewById(R.id.textViewASCII);
-        textEditHex = (EditText) findViewById(R.id.textEditHex);
+        textEditMeta = findViewById(R.id.textEditMeta);
+        textEditMetaDeep = findViewById(R.id.textEditMetaDeep);
+        textViewASCII = findViewById(R.id.textViewASCII);
+        textEditHex = findViewById(R.id.textEditHex);
 
     }
 
@@ -97,7 +97,7 @@ public class StorageDemoActivity extends AppCompatActivity {
 
         currentUri = resultData.getData();
         try {
-            String language = "Not a plain text or not identified";
+            String language = getString(R.string.not_plain_text);
             String type;
             String extension = "";
             String size;
@@ -128,8 +128,7 @@ public class StorageDemoActivity extends AppCompatActivity {
                 error = true;
                 Toast.makeText(getBaseContext(), "failed",
                         Toast.LENGTH_LONG).show();
-                output = s("<font color='#C0392B'>ERROR: Datus is having hard time reading this media file. \n " +
-                        "It is probably because the file has not been released by another application from a pending state</font>");
+                output = s(getString(R.string.error_reading_file));
                 e.printStackTrace();
             }
 
