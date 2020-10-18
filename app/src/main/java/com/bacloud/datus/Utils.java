@@ -13,8 +13,10 @@ import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.util.Log;
+import android.widget.EditText;
 
 import androidx.annotation.RequiresApi;
+import androidx.core.text.HtmlCompat;
 
 import org.apache.commons.io.IOUtils;
 
@@ -23,6 +25,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 
 public class Utils {
 
@@ -281,5 +284,22 @@ public class Utils {
         final String[] units = new String[]{"B", "kB", "MB", "GB", "TB"};
         int digitGroups = (int) (Math.log10(size) / Math.log10(1024));
         return new DecimalFormat("#,##0.#").format(size / Math.pow(1024, digitGroups)) + " " + units[digitGroups];
+    }
+
+    // TAG SMALL FOR HTML OUTPUT
+    public static String s(String s) {
+        return "<small>" + s + "</small>";
+    }
+
+    public static void HTML(EditText textView, String text) {
+        textView.setText(HtmlCompat.fromHtml(text, HtmlCompat.FROM_HTML_MODE_LEGACY));
+    }
+
+    public static String stringBuilderFormatted(ArrayList<String> metadata) {
+        StringBuilder builder = new StringBuilder();
+        for (String value : metadata) {
+            builder.append(value);
+        }
+        return s(builder.toString());
     }
 }

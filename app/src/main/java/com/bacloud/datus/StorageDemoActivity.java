@@ -17,7 +17,6 @@ import android.text.Layout;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.EditText;
@@ -25,7 +24,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.text.HtmlCompat;
 
 import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
@@ -43,7 +41,6 @@ import org.apache.tika.language.LanguageIdentifier;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.mime.MediaType;
 import org.apache.tika.mime.MediaTypeRegistry;
-import org.apache.tika.mime.MimeType;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -54,7 +51,11 @@ import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
+
+import static com.bacloud.datus.FileUtils.detectExtension;
+import static com.bacloud.datus.Utils.HTML;
+import static com.bacloud.datus.Utils.s;
+import static com.bacloud.datus.Utils.stringBuilderFormatted;
 
 public class StorageDemoActivity extends AppCompatActivity {
 
@@ -96,10 +97,10 @@ public class StorageDemoActivity extends AppCompatActivity {
                 showLicences();
                 break;
             case R.id.drewnoakes:
-                thanks("drewnoakes_metadata_extractor.txt");
+                thankTo("drewnoakes_metadata_extractor.txt");
                 break;
             case R.id.tika:
-                thanks("Apache_Tika_Project_License.txt");
+                thankTo("Apache_Tika_Project_License.txt");
                 break;
             default:
                 break;
@@ -222,18 +223,6 @@ public class StorageDemoActivity extends AppCompatActivity {
             Toast.makeText(getBaseContext(), "success",
                     Toast.LENGTH_LONG).show();
 
-    }
-
-    private void HTML(EditText textView, String text) {
-        textView.setText(HtmlCompat.fromHtml(text, HtmlCompat.FROM_HTML_MODE_LEGACY));
-    }
-
-    private String stringBuilderFormatted(ArrayList<String> metadata) {
-        StringBuilder builder = new StringBuilder();
-        for (String value : metadata) {
-            builder.append(value);
-        }
-        return s(builder.toString());
     }
 
     private ArrayList<String> nativeGetMetadata(Uri currentUri) throws IOException, IllegalAccessException, NullPointerException {
@@ -393,31 +382,6 @@ public class StorageDemoActivity extends AppCompatActivity {
         return identifier.getLanguage();
     }
 
-    public String detectExtension(MediaType mediatype) {
-        TikaConfig tika;
-        String extension = "";
-        AtomicReference<String> mimeTypeRef = new AtomicReference<>(null);
-        mimeTypeRef.set(mediatype.toString());
-
-        String mimeType = mimeTypeRef.get();
-        try {
-            MimeType mimetype;
-            tika = new TikaConfig();
-            mimetype = tika.getMimeRepository().forName(mimeType);
-            extension = mimetype.getExtension();
-
-            if (mimeType != null && mimeType.equals("application/gzip") && extension.equals(".tgz")) {
-                extension = ".gz";
-            }
-
-        } catch (TikaException | IOException e) {
-            e.printStackTrace();
-        }
-
-        return extension;
-
-    }
-
     public String getMediaSize(Uri uri) throws FileNotFoundException {
         InputStream inputStream =
                 getContentResolver().openInputStream(uri);
@@ -432,7 +396,7 @@ public class StorageDemoActivity extends AppCompatActivity {
         return Utils.readableFileSize(size);
     }
 
-    public void thanks(String to) {
+    public void thankTo(String to) {
         String message = "";
         try {
             AssetManager am = getApplicationContext().getAssets();
@@ -482,11 +446,6 @@ public class StorageDemoActivity extends AppCompatActivity {
 
         Toast.makeText(getBaseContext(), R.string.special_thanks,
                 Toast.LENGTH_LONG).show();
-    }
-
-    // TAG SMALL FOR HTML OUTPUT
-    public String s(String s) {
-        return "<small>" + s + "</small>";
     }
 
 }
