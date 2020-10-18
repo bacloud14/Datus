@@ -15,6 +15,8 @@ import android.provider.OpenableColumns;
 import android.text.Html;
 import android.text.Layout;
 import android.view.Gravity;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -76,6 +78,33 @@ public class StorageDemoActivity extends AppCompatActivity {
         textViewASCII = findViewById(R.id.textViewASCII);
         textEditHex = findViewById(R.id.textEditHex);
 
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.open:
+                openFile();
+                break;
+            case R.id.license:
+                showLicences();
+                break;
+            case R.id.drewnoakes:
+                thanks("drewnoakes_metadata_extractor.txt");
+                break;
+            case R.id.tika:
+                thanks("Apache_Tika_Project_License.txt");
+                break;
+            default:
+                break;
+        }
+        return true;
     }
 
     public void onActivityResult(int requestCode, int resultCode,
@@ -337,7 +366,7 @@ public class StorageDemoActivity extends AppCompatActivity {
         return "";
     }
 
-    public void openFile(View view) {
+    public void openFile() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
@@ -403,8 +432,7 @@ public class StorageDemoActivity extends AppCompatActivity {
         return Utils.readableFileSize(size);
     }
 
-    public void thanks(View view) {
-        String to = view.getTag().toString();
+    public void thanks(String to) {
         String message = "";
         try {
             AssetManager am = getApplicationContext().getAssets();
@@ -431,7 +459,7 @@ public class StorageDemoActivity extends AppCompatActivity {
     }
 
     private void createDialog(String message) {
-        Dialog customDialog = new Dialog(StorageDemoActivity.this);
+        Dialog customDialog = new Dialog(this);
         customDialog.setContentView(R.layout.licence_layout);
 
         Window window = customDialog.getWindow();
@@ -448,7 +476,7 @@ public class StorageDemoActivity extends AppCompatActivity {
         customDialog.show();
     }
 
-    public void showLicences(View view) {
+    public void showLicences() {
         startActivity(new Intent(this, OssLicensesMenuActivity.class));
         OssLicensesMenuActivity.setActivityTitle(getString(R.string.thanks));
 
