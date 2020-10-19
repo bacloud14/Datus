@@ -1,4 +1,4 @@
-package com.bacloud.datus;
+package com.bacloud.datus.utils;
 
 
 import android.content.ContentResolver;
@@ -9,14 +9,11 @@ import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.graphics.Bitmap;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
-
-import com.drew.lang.StringUtil;
 
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaException;

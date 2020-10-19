@@ -17,14 +17,19 @@ import android.text.Layout;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.bacloud.datus.utils.PDDocumentInformationFormat;
+import com.bacloud.datus.utils.Utils;
 import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
 import com.drew.metadata.Directory;
@@ -52,10 +57,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Set;
 
-import static com.bacloud.datus.FileUtils.detectExtension;
-import static com.bacloud.datus.Utils.HTML;
-import static com.bacloud.datus.Utils.s;
-import static com.bacloud.datus.Utils.stringBuilderFormatted;
+import static com.bacloud.datus.utils.FileUtils.detectExtension;
+import static com.bacloud.datus.utils.Utils.HTML;
+import static com.bacloud.datus.utils.Utils.s;
+import static com.bacloud.datus.utils.Utils.stringBuilderFormatted;
 
 public class StorageDemoActivity extends AppCompatActivity {
 
@@ -65,6 +70,8 @@ public class StorageDemoActivity extends AppCompatActivity {
     private EditText textEditMetaDeep;
     private TextView textViewASCII;
     private EditText textEditHex;
+    private ScrollView scrollContainer;
+    private ImageView imageFile;
 
     private long size = 0;
 
@@ -72,8 +79,9 @@ public class StorageDemoActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         setContentView(R.layout.activity_storage_demo);
+        scrollContainer = findViewById(R.id.scrollContainer);
+        imageFile = findViewById(R.id.ivAddFile);
         textEditMeta = findViewById(R.id.textEditMeta);
         textEditMetaDeep = findViewById(R.id.textEditMetaDeep);
         textViewASCII = findViewById(R.id.textViewASCII);
@@ -118,7 +126,7 @@ public class StorageDemoActivity extends AppCompatActivity {
         String alias;
         MediaTypeRegistry registry = MediaTypeRegistry.getDefaultRegistry();
         if (resultCode != Activity.RESULT_OK || requestCode != OPEN_REQUEST_CODE || resultData == null) {
-            Toast.makeText(getBaseContext(), "success",
+            Toast.makeText(getBaseContext(), R.string.select_file,
                     Toast.LENGTH_LONG).show();
             return;
         }
@@ -154,9 +162,13 @@ public class StorageDemoActivity extends AppCompatActivity {
                                 "<br>Size: %s"
                         , native_tags[0], type, alias, language, extension, size));
                 error = false;
+                imageFile.setVisibility(View.INVISIBLE);
+                scrollContainer.setVisibility(View.VISIBLE);
             } catch (TikaException | IllegalAccessException | InstantiationException | RuntimeException e) {
                 error = true;
-                Toast.makeText(getBaseContext(), "failed",
+                imageFile.setVisibility(View.VISIBLE);
+                scrollContainer.setVisibility(View.INVISIBLE);
+                Toast.makeText(getBaseContext(), R.string.error_occurred,
                         Toast.LENGTH_LONG).show();
                 output = s(getString(R.string.error_reading_file));
                 e.printStackTrace();
@@ -220,7 +232,7 @@ public class StorageDemoActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         if (!error)
-            Toast.makeText(getBaseContext(), "success",
+            Toast.makeText(getBaseContext(), R.string.success,
                     Toast.LENGTH_LONG).show();
 
     }

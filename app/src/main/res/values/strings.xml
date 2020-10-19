@@ -13,4 +13,7 @@
     <string name="file_metadata">File metadata</string>
     <string name="detailed_metadata">Detailed metadata</string>
     <string name="hex_preview">Hex preview</string>
+    <string name="error_occurred">An error occurred</string>
+    <string name="select_file">Please, select a file</string>
+    <string name="success">Success</string>
 </resources>

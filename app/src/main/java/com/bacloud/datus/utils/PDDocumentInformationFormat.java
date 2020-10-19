@@ -1,4 +1,4 @@
-package com.bacloud.datus;
+package com.bacloud.datus.utils;
 
 import androidx.annotation.Nullable;
 
