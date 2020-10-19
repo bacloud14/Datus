@@ -15,16 +15,21 @@ import android.provider.OpenableColumns;
 import android.text.Html;
 import android.text.Layout;
 import android.view.Gravity;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.text.HtmlCompat;
 
+import com.bacloud.datus.utils.PDDocumentInformationFormat;
+import com.bacloud.datus.utils.Utils;
 import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
 import com.drew.metadata.Directory;
@@ -41,7 +46,6 @@ import org.apache.tika.language.LanguageIdentifier;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.mime.MediaType;
 import org.apache.tika.mime.MediaTypeRegistry;
-import org.apache.tika.mime.MimeType;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -52,7 +56,11 @@ import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
+
+import static com.bacloud.datus.utils.FileUtils.detectExtension;
+import static com.bacloud.datus.utils.Utils.HTML;
+import static com.bacloud.datus.utils.Utils.s;
+import static com.bacloud.datus.utils.Utils.stringBuilderFormatted;
 
 public class StorageDemoActivity extends AppCompatActivity {
 
@@ -62,6 +70,8 @@ public class StorageDemoActivity extends AppCompatActivity {
     private EditText textEditMetaDeep;
     private TextView textViewASCII;
     private EditText textEditHex;
+    private ScrollView scrollContainer;
+    private ImageView imageFile;
 
     private long size = 0;
 
@@ -69,13 +79,41 @@ public class StorageDemoActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         setContentView(R.layout.activity_storage_demo);
-        textEditMeta = (EditText) findViewById(R.id.textEditMeta);
-        textEditMetaDeep = (EditText) findViewById(R.id.textEditMetaDeep);
-        textViewASCII = (TextView) findViewById(R.id.textViewASCII);
-        textEditHex = (EditText) findViewById(R.id.textEditHex);
+        scrollContainer = findViewById(R.id.scrollContainer);
+        imageFile = findViewById(R.id.ivAddFile);
+        textEditMeta = findViewById(R.id.textEditMeta);
+        textEditMetaDeep = findViewById(R.id.textEditMetaDeep);
+        textViewASCII = findViewById(R.id.textViewASCII);
+        textEditHex = findViewById(R.id.textEditHex);
 
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.open:
+                openFile();
+                break;
+            case R.id.license:
+                showLicences();
+                break;
+            case R.id.drewnoakes:
+                thankTo("drewnoakes_metadata_extractor.txt");
+                break;
+            case R.id.tika:
+                thankTo("Apache_Tika_Project_License.txt");
+                break;
+            default:
+                break;
+        }
+        return true;
     }
 
     public void onActivityResult(int requestCode, int resultCode,
@@ -88,7 +126,7 @@ public class StorageDemoActivity extends AppCompatActivity {
         String alias;
         MediaTypeRegistry registry = MediaTypeRegistry.getDefaultRegistry();
         if (resultCode != Activity.RESULT_OK || requestCode != OPEN_REQUEST_CODE || resultData == null) {
-            Toast.makeText(getBaseContext(), "success",
+            Toast.makeText(getBaseContext(), R.string.select_file,
                     Toast.LENGTH_LONG).show();
             return;
         }
@@ -97,7 +135,7 @@ public class StorageDemoActivity extends AppCompatActivity {
 
         currentUri = resultData.getData();
         try {
-            String language = "Not a plain text or not identified";
+            String language = getString(R.string.not_plain_text);
             String type;
             String extension = "";
             String size;
@@ -124,12 +162,15 @@ public class StorageDemoActivity extends AppCompatActivity {
                                 "<br>Size: %s"
                         , native_tags[0], type, alias, language, extension, size));
                 error = false;
+                imageFile.setVisibility(View.INVISIBLE);
+                scrollContainer.setVisibility(View.VISIBLE);
             } catch (TikaException | IllegalAccessException | InstantiationException | RuntimeException e) {
                 error = true;
-                Toast.makeText(getBaseContext(), "failed",
+                imageFile.setVisibility(View.VISIBLE);
+                scrollContainer.setVisibility(View.INVISIBLE);
+                Toast.makeText(getBaseContext(), R.string.error_occurred,
                         Toast.LENGTH_LONG).show();
-                output = s("<font color='#C0392B'>ERROR: Datus is having hard time reading this media file. \n " +
-                        "It is probably because the file has not been released by another application from a pending state</font>");
+                output = s(getString(R.string.error_reading_file));
                 e.printStackTrace();
             }
 
@@ -191,21 +232,9 @@ public class StorageDemoActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         if (!error)
-            Toast.makeText(getBaseContext(), "success",
+            Toast.makeText(getBaseContext(), R.string.success,
                     Toast.LENGTH_LONG).show();
 
-    }
-
-    private void HTML(EditText textView, String text) {
-        textView.setText(HtmlCompat.fromHtml(text, HtmlCompat.FROM_HTML_MODE_LEGACY));
-    }
-
-    private String stringBuilderFormatted(ArrayList<String> metadata) {
-        StringBuilder builder = new StringBuilder();
-        for (String value : metadata) {
-            builder.append(value);
-        }
-        return s(builder.toString());
     }
 
     private ArrayList<String> nativeGetMetadata(Uri currentUri) throws IOException, IllegalAccessException, NullPointerException {
@@ -338,7 +367,7 @@ public class StorageDemoActivity extends AppCompatActivity {
         return "";
     }
 
-    public void openFile(View view) {
+    public void openFile() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
@@ -365,31 +394,6 @@ public class StorageDemoActivity extends AppCompatActivity {
         return identifier.getLanguage();
     }
 
-    public String detectExtension(MediaType mediatype) {
-        TikaConfig tika;
-        String extension = "";
-        AtomicReference<String> mimeTypeRef = new AtomicReference<>(null);
-        mimeTypeRef.set(mediatype.toString());
-
-        String mimeType = mimeTypeRef.get();
-        try {
-            MimeType mimetype;
-            tika = new TikaConfig();
-            mimetype = tika.getMimeRepository().forName(mimeType);
-            extension = mimetype.getExtension();
-
-            if (mimeType != null && mimeType.equals("application/gzip") && extension.equals(".tgz")) {
-                extension = ".gz";
-            }
-
-        } catch (TikaException | IOException e) {
-            e.printStackTrace();
-        }
-
-        return extension;
-
-    }
-
     public String getMediaSize(Uri uri) throws FileNotFoundException {
         InputStream inputStream =
                 getContentResolver().openInputStream(uri);
@@ -404,8 +408,7 @@ public class StorageDemoActivity extends AppCompatActivity {
         return Utils.readableFileSize(size);
     }
 
-    public void thanks(View view) {
-        String to = view.getTag().toString();
+    public void thankTo(String to) {
         String message = "";
         try {
             AssetManager am = getApplicationContext().getAssets();
@@ -432,7 +435,7 @@ public class StorageDemoActivity extends AppCompatActivity {
     }
 
     private void createDialog(String message) {
-        Dialog customDialog = new Dialog(StorageDemoActivity.this);
+        Dialog customDialog = new Dialog(this);
         customDialog.setContentView(R.layout.licence_layout);
 
         Window window = customDialog.getWindow();
@@ -449,17 +452,12 @@ public class StorageDemoActivity extends AppCompatActivity {
         customDialog.show();
     }
 
-    public void showLicences(View view) {
+    public void showLicences() {
         startActivity(new Intent(this, OssLicensesMenuActivity.class));
         OssLicensesMenuActivity.setActivityTitle(getString(R.string.thanks));
 
         Toast.makeText(getBaseContext(), R.string.special_thanks,
                 Toast.LENGTH_LONG).show();
-    }
-
-    // TAG SMALL FOR HTML OUTPUT
-    public String s(String s) {
-        return "<small>" + s + "</small>";
     }
 
 }

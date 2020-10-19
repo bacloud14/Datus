@@ -1,4 +1,4 @@
-package com.bacloud.datus;
+package com.bacloud.datus.utils;
 
 
 import android.content.ContentResolver;
@@ -9,19 +9,23 @@ import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.graphics.Bitmap;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
 
-import com.drew.lang.StringUtil;
+import org.apache.tika.config.TikaConfig;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.mime.MediaType;
+import org.apache.tika.mime.MimeType;
 
 import java.io.File;
 import java.io.FileFilter;
+import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.Comparator;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author Peli
@@ -488,5 +492,30 @@ public class FileUtils {
         // Only return URIs that can be opened with ContentResolver
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         return intent;
+    }
+
+    public static String detectExtension(MediaType mediatype) {
+        TikaConfig tika;
+        String extension = "";
+        AtomicReference<String> mimeTypeRef = new AtomicReference<>(null);
+        mimeTypeRef.set(mediatype.toString());
+
+        String mimeType = mimeTypeRef.get();
+        try {
+            MimeType mimetype;
+            tika = new TikaConfig();
+            mimetype = tika.getMimeRepository().forName(mimeType);
+            extension = mimetype.getExtension();
+
+            if (mimeType != null && mimeType.equals("application/gzip") && extension.equals(".tgz")) {
+                extension = ".gz";
+            }
+
+        } catch (TikaException | IOException e) {
+            e.printStackTrace();
+        }
+
+        return extension;
+
     }
 }
