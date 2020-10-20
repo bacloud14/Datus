@@ -12,10 +12,10 @@ It does not connect to any server; So it is 100% offline.
 
 UI:
 
-![Datus](Screenshot4.jpg)
-![Datus](Screenshot5.jpg)
-![Datus](Screenshot6.jpg)
-![Datus](Screenshot7.jpg)
+![Datus](Screenshot4.png)
+![Datus](Screenshot5.png)
+![Datus](Screenshot6.png)
+![Datus](Screenshot7.png)
 
 # Contribution
 
