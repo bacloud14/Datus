@@ -55,6 +55,7 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Set;
 
 import static com.bacloud.datus.utils.FileUtils.detectExtension;
@@ -86,6 +87,7 @@ public class StorageDemoActivity extends AppCompatActivity {
         textEditMetaDeep = findViewById(R.id.textEditMetaDeep);
         textViewASCII = findViewById(R.id.textViewASCII);
         textEditHex = findViewById(R.id.textEditHex);
+        Utils.makeCopyable(Arrays.asList(textEditMeta, textEditMetaDeep, textEditHex));
 
     }
 

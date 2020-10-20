@@ -13,6 +13,7 @@ import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.util.Log;
+
 import android.widget.EditText;
 
 import androidx.annotation.RequiresApi;
@@ -26,6 +27,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.List;
 
 public class Utils {
 
@@ -301,5 +303,13 @@ public class Utils {
             builder.append(value);
         }
         return s(builder.toString());
+    }
+
+    public static void makeCopyable(List<EditText> editables){
+        for (EditText editText:editables)
+            {
+                editText.setTextIsSelectable(true);
+                editText.setKeyListener(null);
+            }
     }
 }
